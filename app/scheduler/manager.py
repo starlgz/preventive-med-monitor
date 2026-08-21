@@ -32,6 +32,8 @@ class TaskScheduler:
         """
         将注册的插件元数据同步注册进 SQLite sources 表
         """
+        # 确保插件已发现后再同步（懒加载发现机制）
+        SourceRegistry.discover_and_register()
         plugins = SourceRegistry.get_all()
         async with AsyncSessionLocal() as session:
             for plugin in plugins:
@@ -188,6 +190,17 @@ class TaskScheduler:
             self.scheduler.start()
             self._is_running = True
             logger.info(f"⏰ TaskScheduler started! Polling every {settings.SCHEDULER_INTERVAL_MINUTES} minutes.")
+            # 同步最新插件元数据到 DB，使新增数据源自动纳入后续轮询
+            self.start_sync_sources()
+
+    def start_sync_sources(self):
+        """同步注册最新插件元数据到 DB（供启动时调用，确保新增数据源自动计入后台调度）"""
+        import asyncio
+        try:
+            asyncio.create_task(self.sync_sources_to_db())
+            logger.info("🔄 已触发将最新插件元数据同步至 sources 表...")
+        except Exception as e:
+            logger.warning(f"同步 sources 到 DB 失败: {e}")
 
     def shutdown(self):
         """

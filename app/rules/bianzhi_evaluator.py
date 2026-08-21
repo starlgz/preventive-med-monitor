@@ -72,6 +72,13 @@ class BianzhiEvaluator:
         "其他事业单位": {"score": 0.0, "reason": "其他事业单位常规评估"}
     }
 
+    # 7. 定向培养/公费公卫医师/订单式入编强确编证据
+    ORIENTED_BINDING_KEYWORDS = [
+        (r"定向培养.*(?:入编|编制|事业编)|订单定向.*(?:编制|事业编)|公费公卫医师.*(?:编制|入编)", "定向/公费入编", "订单定向培养或公费公卫医师项目明确入编安排"),
+        (r"全科医生定向培养.*(?:在编|入编|编制)|农村订单定向医学生.*(?:编制|入编)", "基层全科定向入编", "基层全科/农村订单定向医学生毕业入编安置"),
+        (r"专项编制保障|单列编制|周转编制|编制专项", "专项编制保障", "人社/编制部门核定的专项或周转编制保障"),
+    ]
+
     @classmethod
     def evaluate(
         cls,
@@ -193,6 +200,17 @@ class BianzhiEvaluator:
                 strong_found = True
                 if not determined_type:
                     determined_type = b_type
+
+        # 定向/公费公卫医师强确编检查（额外加分，用于基层定向与公费项目）
+        for pat, term, reason in cls.ORIENTED_BINDING_KEYWORDS:
+            if re.search(pat, full_text):
+                score += 0.5
+                if term not in evidence_chain:
+                    evidence_chain.append(term)
+                evidence_list.append(f"【定向确编】{reason}")
+                strong_found = True
+                if not determined_type:
+                    determined_type = "全额事业编"
 
         # 结合用人单位类型偏置
         bias = cls.UNIT_TYPE_BIAS.get(derived_unit_type, {"score": 0.0, "reason": ""})
