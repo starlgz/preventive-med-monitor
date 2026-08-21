@@ -96,6 +96,14 @@ PROVINCE_SOURCES: List[Dict[str, Any]] = [
     {"code": "xiamen_cdc", "name": "厦门市疾病预防控制中心", "province": "福建省", "city": "厦门市", "url": "http://www.xmcdc.com.cn", "category": "计划单列市疾控/官方"},
     {"code": "dalian_cdc", "name": "大连市疾病预防控制中心", "province": "辽宁省", "city": "大连市", "url": "http://www.dlcdc.org.cn", "category": "计划单列市疾控/官方"},
     {"code": "ningbo_cdc", "name": "宁波市疾病预防控制中心", "province": "浙江省", "city": "宁波市", "url": "http://www.nbcdc.org.cn", "category": "计划单列市疾控/官方"},
+    {"code": "jinan_cdc", "name": "济南市疾病预防控制中心", "province": "山东省", "city": "济南市", "url": "http://jncdc.jinan.gov.cn", "category": "副省级疾控/官方"},
+    {"code": "shenyang_cdc", "name": "沈阳市疾病预防控制中心", "province": "辽宁省", "city": "沈阳市", "url": "http://sycdc.shenyang.gov.cn", "category": "副省级疾控/官方"},
+    {"code": "harbin_cdc", "name": "哈尔滨市疾病预防控制中心", "province": "黑龙江省", "city": "哈尔滨市", "url": "http://www.hrbcdc.org.cn", "category": "副省级疾控/官方"},
+    {"code": "changchun_cdc", "name": "长春市疾病预防控制中心", "province": "吉林省", "city": "长春市", "url": "http://cccdc.changchun.gov.cn", "category": "副省级疾控/官方"},
+    {"code": "suzhou_cdc", "name": "苏州市疾病预防控制中心", "province": "江苏省", "city": "苏州市", "url": "http://www.szcdc.cn", "category": "公卫重点城市疾控/官方"},
+    {"code": "changsha_cdc", "name": "长沙市疾病预防控制中心", "province": "湖南省", "city": "长沙市", "url": "http://cscdc.changsha.gov.cn", "category": "公卫重点城市疾控/官方"},
+    {"code": "hefei_cdc", "name": "合肥市疾病预防控制中心", "province": "安徽省", "city": "合肥市", "url": "http://www.hfcdc.org.cn", "category": "公卫重点城市疾控/官方"},
+    {"code": "fuzhou_cdc", "name": "福州市疾病预防控制中心", "province": "福建省", "city": "福州市", "url": "http://www.fzcdc.com.cn", "category": "公卫重点城市疾控/官方"},
 ]
 
 PROVINCES_SOURCE_POOL = PROVINCE_SOURCES

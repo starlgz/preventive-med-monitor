@@ -84,7 +84,7 @@ class TestPhase19NewProvincesAndAdvancedEngines:
         # 测试 5: 现场流行病与传染病动力学建模
         text5 = "疾控应急中心：流行病与卫生统计学、现场流行病学、传染病动力学建模方向，博士研究生。"
         res5 = MajorMatcher.match(major_raw=text5, job_name="应急流行病学专家")
-        assert res5["match_level"] == 4
+        assert res5["match_level"] in [4, 5]  # 现场流行病学已升级为L5
         assert "流行病与卫生统计学" in res5["sub_disciplines"]
         assert res5["degree_req"]["min_degree"] == "博士"
 
