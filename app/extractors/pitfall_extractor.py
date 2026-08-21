@@ -90,6 +90,16 @@ class PitfallExtractor:
             pitfalls.append("⚡ 工作强度预警：常年涉及24小时应急值班或高风险现场涉化涉疫处置")
             risk_score += 1
 
+        # 2.3 必须承诺服从乡镇/海岛/偏远基层调配
+        if re.search(r"须服从.*(?:偏远|基层|乡镇|分院|海岛|跨区域).*调配|服从全市公卫系统统筹调剂派驻", full_text):
+            pitfalls.append("📍 派驻风险：招考录用后须无条件服从偏远基层/乡镇/海岛轮岗或长期派驻调配")
+            risk_score += 1
+
+        # 2.4 资格审核专业名称必须与教育部专业目录字字一致（一字不差）
+        if re.search(r"专业名称须与毕业证一致且与目录字字相符|专业代码及名称一字不差|自设二级学科或研究方向不作为专业依据", full_text):
+            pitfalls.append("⚠️ 审核严格：严审专业字字一致，毕业证有括号方向或自设专业极易资格复审不通过")
+            risk_score += 2
+
         # 3. 政治面貌门槛
         is_party_required = 0
         party_evidence = None
