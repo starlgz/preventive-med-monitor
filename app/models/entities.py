@@ -217,3 +217,24 @@ class Application(Base):
     exam_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+class CustomSource(Base):
+    """
+    用户自定义低代码爬虫源配置表
+    """
+    __tablename__ = "custom_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_key: Mapped[str] = mapped_column(String(64), unique=True, index=True) # 唯一标识
+    name: Mapped[str] = mapped_column(String(128))                                # 爬虫名称
+    province: Mapped[str] = mapped_column(String(32), default="全国")            # 归属省份
+    protocol: Mapped[str] = mapped_column(String(32), default="html_list")        # html_list / json_api / rss
+    rule_json: Mapped[str] = mapped_column(Text)                                 # 完整的规则配置 JSON
+    cron_expr: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # 自定义周期
+    is_active: Mapped[int] = mapped_column(Integer, default=1)                   # 是否启用 1/0
+    last_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True) # SUCCESS / FAILED
+    last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+

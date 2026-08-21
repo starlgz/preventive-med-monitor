@@ -19,6 +19,7 @@ from app.api.bot import router as bot_router
 from app.web.dashboard import router as web_router
 from app.api.ai import router as ai_router
 from app.api.pipeline import router as pipeline_router
+from app.api.custom_sources import router as custom_sources_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,6 +60,7 @@ app.include_router(filters_router, prefix="/api/v1")
 app.include_router(bot_router, prefix="/api/v1")
 app.include_router(ai_router, prefix="/api/v1")
 app.include_router(pipeline_router, prefix="/api/v1")
+app.include_router(custom_sources_router, prefix="/api/v1")
 
 # 挂载 Web SPA 页面与大盘 REST API
 app.include_router(web_router)

@@ -16,4 +16,12 @@ export const batchMatchAllJobs = () => apiClient.post('/rules/batch_match_all_jo
 export const testBotCommand = (data) => apiClient.post('/bot/command', data)
 export const evaluateJobAI = (data) => apiClient.post('/ai/evaluate_job', data)
 
+// 自定义低代码爬虫接口
+export const fetchCustomSources = () => apiClient.get('/sources/custom')
+export const createCustomSource = (data) => apiClient.post('/sources/custom', data)
+export const updateCustomSource = (sourceKey, data) => apiClient.put(`/sources/custom/${sourceKey}`, data)
+export const deleteCustomSource = (sourceKey) => apiClient.delete(`/sources/custom/${sourceKey}`)
+export const testCustomSourceSandbox = (data) => apiClient.post('/sources/custom/test', data)
+export const triggerCustomSourceRun = (sourceKey) => apiClient.post(`/sources/custom/${sourceKey}/run`)
+
 export const fetchSystemHealth = () => apiClient.get('/health')

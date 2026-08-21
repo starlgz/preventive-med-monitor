@@ -8,8 +8,10 @@ import httpx
 from app.core.config import settings
 from app.core.logger import logger
 from app.core.database import AsyncSessionLocal
-from app.models.entities import Source, Announcement, CrawlLog
+from app.models.entities import Source, Announcement, CrawlLog, CustomSource
 from app.sources.registry import SourceRegistry
+from app.engine.generic_crawler import GenericCrawlerEngine
+import json
 
 class TaskScheduler:
     """
@@ -147,6 +149,98 @@ class TaskScheduler:
             "error": error_msg
         }
 
+    async def run_custom_source(self, custom_source_id: int) -> Dict[str, Any]:
+        """
+        执行单个用户自定义爬虫，带抓取、去重与流水线入库
+        """
+        async with AsyncSessionLocal() as session:
+            res = await session.execute(select(CustomSource).where(CustomSource.id == custom_source_id))
+            src_db = res.scalars().first()
+            if not src_db:
+                return {"id": custom_source_id, "status": "FAILED", "items_found": 0, "new_saved": 0, "error": "Custom source not found"}
+
+            source_name = src_db.name
+            source_key = src_db.source_key
+            province = src_db.province
+            try:
+                rule_dict = json.loads(src_db.rule_json)
+            except Exception as e:
+                return {"id": custom_source_id, "status": "FAILED", "items_found": 0, "new_saved": 0, "error": f"Invalid JSON: {e}"}
+
+        logger.info(f"🚀 Starting custom crawl task for: [{source_key}] {source_name}")
+        engine = GenericCrawlerEngine(timeout=15.0)
+        status = "SUCCESS"
+        error_msg = None
+        items_found = 0
+        new_saved = 0
+
+        try:
+            crawl_res = await engine.execute_crawl(rule_dict, max_items=20)
+            items = crawl_res.get("items", [])
+            items_found = len(items)
+
+            async with AsyncSessionLocal() as session:
+                for item in items:
+                    url = item.get("url")
+                    title = item.get("title")
+                    if not url or not title:
+                        continue
+
+                    # 检查是否已抓取过相同 URL
+                    res = await session.execute(select(Announcement).where(Announcement.url == url))
+                    existing = res.scalars().first()
+                    if not existing:
+                        pub_date = None
+                        if item.get("date"):
+                            try:
+                                pub_date = datetime.strptime(item["date"][:10], "%Y-%m-%d")
+                            except Exception:
+                                pub_date = datetime.now()
+                        ann = Announcement(
+                            source_id=source_key,
+                            title=title,
+                            url=url,
+                            publish_date=pub_date or datetime.now(),
+                            province=province,
+                            city=None,
+                            content_raw=item.get("content"),
+                            is_processed=0
+                        )
+                        session.add(ann)
+                        new_saved += 1
+
+                # 更新 CustomSource 状态
+                res = await session.execute(select(CustomSource).where(CustomSource.id == custom_source_id))
+                curr = res.scalars().first()
+                if curr:
+                    curr.last_run_at = datetime.now()
+                    curr.last_status = "SUCCESS"
+                    curr.last_error = None
+                await session.commit()
+                logger.info(f"✅ Custom source [{source_name}] finished: {items_found} found, {new_saved} new saved.")
+
+        except Exception as e:
+            status = "FAILED"
+            error_msg = str(e)
+            logger.error(f"❌ Custom source [{source_name}] crawl failed: {e}")
+            async with AsyncSessionLocal() as session:
+                res = await session.execute(select(CustomSource).where(CustomSource.id == custom_source_id))
+                curr = res.scalars().first()
+                if curr:
+                    curr.last_run_at = datetime.now()
+                    curr.last_status = "FAILED"
+                    curr.last_error = error_msg
+                await session.commit()
+
+        return {
+            "id": custom_source_id,
+            "source_key": source_key,
+            "status": status,
+            "items_found": items_found,
+            "new_saved": new_saved,
+            "error": error_msg
+        }
+
     async def run_all_sources(self):
         """
         轮询所有启用的数据源
@@ -161,6 +255,14 @@ class TaskScheduler:
             await self.run_single_source(src.source_id)
             await asyncio.sleep(2)
             
+        # 同时抓取启用的用户自定义源
+        async with AsyncSessionLocal() as session:
+            res_c = await session.execute(select(CustomSource).where(CustomSource.is_active == 1))
+            custom_sources = res_c.scalars().all()
+        for c_src in custom_sources:
+            await self.run_custom_source(c_src.id)
+            await asyncio.sleep(2)
+
         logger.info("🏁 All active sources crawl round finished.")
 
     def get_status(self) -> Dict[str, Any]:
