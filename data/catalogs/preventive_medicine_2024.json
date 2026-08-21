@@ -1,0 +1,92 @@
+[
+  {
+    "version_year": 2024,
+    "degree_level": "undergraduate",
+    "category_code": "1004",
+    "major_code": "100401K",
+    "major_name": "预防医学",
+    "match_weight": 5,
+    "remarks": "本科核心国控专业，完全对口"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "undergraduate",
+    "category_code": "1004",
+    "major_code": "100402TK",
+    "major_name": "卫生检验与检疫",
+    "match_weight": 5,
+    "remarks": "本科特设专业，理化微生物检验对口"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "undergraduate",
+    "category_code": "1004",
+    "major_code": "100403TK",
+    "major_name": "妇幼保健医学",
+    "match_weight": 5,
+    "remarks": "本科特设专业，妇幼公卫对口"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "graduate",
+    "category_code": "1004",
+    "major_code": "1004",
+    "major_name": "公共卫生与预防医学",
+    "match_weight": 5,
+    "remarks": "研究生一级学科"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "graduate",
+    "category_code": "1004",
+    "major_code": "100401",
+    "major_name": "流行病与卫生统计学",
+    "match_weight": 5,
+    "remarks": "研究生二级学科"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "graduate",
+    "category_code": "1004",
+    "major_code": "100402",
+    "major_name": "劳动卫生与环境卫生学",
+    "match_weight": 5,
+    "remarks": "研究生二级学科"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "graduate",
+    "category_code": "1004",
+    "major_code": "100403",
+    "major_name": "营养与食品卫生学",
+    "match_weight": 5,
+    "remarks": "研究生二级学科"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "graduate",
+    "category_code": "1004",
+    "major_code": "100404",
+    "major_name": "儿少卫生与妇幼保健学",
+    "match_weight": 5,
+    "remarks": "研究生二级学科"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "graduate",
+    "category_code": "1004",
+    "major_code": "100405",
+    "major_name": "卫生毒理学",
+    "match_weight": 5,
+    "remarks": "研究生二级学科"
+  },
+  {
+    "version_year": 2024,
+    "degree_level": "graduate",
+    "category_code": "1053",
+    "major_code": "1053",
+    "major_name": "公共卫生硕士",
+    "match_weight": 5,
+    "remarks": "公卫专业硕士(MPH)"
+  }
+]

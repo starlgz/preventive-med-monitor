@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全国预防医学事业单位招聘实时监测系统 - 控制台</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- ECharts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .star-active { color: #f59e0b; }
+        .tag-green { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+        .tag-yellow { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .tag-red { background-color: #fee2e2; color: #991b1b; border-color: #fecaca; }
+        .badge-s { background-color: #ef4444; color: white; }
+        .badge-a { background-color: #f97316; color: white; }
+        .badge-b { background-color: #3b82f6; color: white; }
+        .badge-c { background-color: #6b7280; color: white; }
+        .urgent-pulse {
+            animation: pulse-urgent 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-urgent {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .6; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col font-sans">
+
+    <!-- 顶部导航栏 -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg text-lg">
+                    <i class="fa-solid fa-virus-slash"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900 leading-tight">全国预防医学招聘监测</h1>
+                    <p class="text-xs text-gray-500">公共卫生 / 疾控 / 卫健系统实时招考智能监测大盘</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span class="w-2 h-2 mr-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                    实时监测运行中
+                </span>
+                <button onclick="toggleVisualPanel()" class="text-xs px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg border border-indigo-200 transition flex items-center">
+                    <i class="fa-solid fa-chart-pie mr-1"></i> <span id="visual-btn-text">查看统计图表</span>
+                </button>
+                <button onclick="triggerRecalculate()" class="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg border border-blue-200 transition flex items-center shadow-sm">
+                    <i class="fa-solid fa-arrows-rotate mr-1"></i> <span id="recalc-btn-text">全量智能重算</span>
+                </button>
+                <div class="relative inline-block text-left">
+                    <button onclick="toggleExportMenu()" class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition flex items-center shadow-sm">
+                        <i class="fa-solid fa-file-export mr-1"></i> 导出岗位 <i class="fa-solid fa-chevron-down ml-1 text-xs"></i>
+                    </button>
+                    <div id="export-dropdown" class="hidden absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-40">
+                        <a href="javascript:void(0)" onclick="triggerExport('excel')" class="block px-4 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center">
+                            <i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i> 导出 Excel (.xlsx)
+                        </a>
+                        <a href="javascript:void(0)" onclick="triggerExport('csv')" class="block px-4 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center">
+                            <i class="fa-solid fa-file-csv text-blue-600 mr-2"></i> 导出 CSV (.csv)
+                        </a>
+                    </div>
+                </div>
+                <a href="/docs" target="_blank" class="text-gray-500 hover:text-gray-700 text-sm flex items-center">
+                    <i class="fa-solid fa-book-open mr-1"></i> API 文档
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主体区域 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- 统计卡片概览 (大屏模式) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">总招考岗位</div>
+                <div id="stat-total-jobs" class="mt-2 text-2xl font-black text-blue-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">5星核心对口</div>
+                <div id="stat-5star-jobs" class="mt-2 text-2xl font-black text-amber-500">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">🟢 事业编制岗位</div>
+                <div id="stat-bianzhi-jobs" class="mt-2 text-2xl font-black text-emerald-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">🟡 备案制/员额</div>
+                <div id="stat-beian-jobs" class="mt-2 text-2xl font-black text-yellow-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">今日新增速报</div>
+                <div id="stat-today-jobs" class="mt-2 text-2xl font-black text-purple-600">--</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">监控数据源数</div>
+                <div id="stat-sources" class="mt-2 text-2xl font-black text-indigo-600">--</div>
+            </div>
+        </div>
+
+        <!-- 统计图表抽屉/折叠区 -->
+        <div id="visual-charts-section" class="hidden bg-white p-5 rounded-xl border border-indigo-100 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 class="text-base font-bold text-gray-900 flex items-center">
+                    <i class="fa-solid fa-chart-column text-indigo-600 mr-2"></i> 全国招考多维动态分布大盘
+                </h3>
+                <span class="text-xs text-gray-400">实时聚合分析</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="border border-gray-100 rounded-lg p-3">
+                    <div class="text-xs font-bold text-gray-600 mb-2 text-center">各省份岗位热度 Top 分布</div>
+                    <div id="chart-province" style="height: 240px;"></div>
+                </div>
+                <div class="border border-gray-100 rounded-lg p-3">
+                    <div class="text-xs font-bold text-gray-600 mb-2 text-center">专业匹配星级分布</div>
+                    <div id="chart-stars" style="height: 240px;"></div>
+                </div>
+                <div class="border border-gray-100 rounded-lg p-3">
+                    <div class="text-xs font-bold text-gray-600 mb-2 text-center">招考单位类型构成</div>
+                    <div id="chart-units" style="height: 240px;"></div>
+                </div>
+                <div class="border border-gray-100 rounded-lg p-3">
+                    <div class="text-xs font-bold text-gray-600 mb-2 text-center">编制形式分布</div>
+                    <div id="chart-bianzhi" style="height: 240px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选与操作工具栏 -->
+        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">省份地区</label>
+                    <input id="filter-province" type="text" placeholder="如 浙江、江苏、全国" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">专业匹配星级</label>
+                    <select id="filter-star" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">全部星级</option>
+                        <option value="5">⭐⭐⭐⭐⭐ 5星对口</option>
+                        <option value="4">⭐⭐⭐⭐ 4星硕博/二级学科</option>
+                        <option value="3">⭐⭐⭐ 3星公卫大类</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">编制属性</label>
+                    <select id="filter-bianzhi" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">全部类型</option>
+                        <option value="1">🟢 实名事业编制</option>
+                        <option value="2">🟡 备案制 / 存疑待查</option>
+                        <option value="0">🔴 编外 / 劳务派遣</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">关键词搜索</label>
+                    <input id="filter-keyword" type="text" placeholder="单位/岗位/专业..." class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex items-end space-x-2">
+                    <button onclick="loadJobs()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-3 rounded-lg text-sm transition">
+                        <i class="fa-solid fa-magnifying-glass mr-1"></i> 查询
+                    </button>
+                    <button onclick="resetFilters()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-3 rounded-lg text-sm transition">
+                        重置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 岗位列表表格 -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="text-base font-bold text-gray-900">招考岗位监测列表</h3>
+                <span id="job-count-badge" class="text-xs bg-gray-200 text-gray-700 px-2.5 py-1 rounded-full font-medium">共 0 条</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
+                    <thead class="bg-gray-50 text-gray-500 text-xs font-semibold uppercase tracking-wider">
+                        <tr>
+                            <th class="px-4 py-3">优先级</th>
+                            <th class="px-4 py-3">省份</th>
+                            <th class="px-4 py-3">招考单位与性质</th>
+                            <th class="px-4 py-3">招聘岗位</th>
+                            <th class="px-4 py-3">人数</th>
+                            <th class="px-4 py-3">学历 / 专业要求</th>
+                            <th class="px-4 py-3">专业对口度</th>
+                            <th class="px-4 py-3">编制性质</th>
+                            <th class="px-4 py-3">报考画像门槛</th>
+                            <th class="px-4 py-3">报名截止/倒计时</th>
+                            <th class="px-4 py-3 text-right">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="job-list-body" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="11" class="px-6 py-8 text-center text-gray-400">正在获取最新岗位数据...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- AI 研判详情弹窗 -->
+    <div id="ai-modal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl max-w-2xl w-full mx-4 p-6 space-y-4 shadow-xl border border-gray-100">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center">
+                    <i class="fa-solid fa-robot text-blue-600 mr-2"></i> AI 报考资格与风险深度研判报告
+                </h3>
+                <button onclick="closeAiModal()" class="text-gray-400 hover:text-gray-600 text-lg">&times;</button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div>
+                    <h4 class="font-bold text-gray-700" id="ai-modal-subtitle">正在研判岗位...</h4>
+                </div>
+                <div class="p-3 bg-blue-50 text-blue-900 rounded-lg">
+                    <span class="font-bold">资格初审结论：</span>
+                    <span id="ai-eligible-summary">计算中...</span>
+                </div>
+                <div>
+                    <span class="font-bold text-gray-700">专业契合分析：</span>
+                    <p id="ai-major-analysis" class="text-gray-600 mt-1">计算中...</p>
+                </div>
+                <div>
+                    <span class="font-bold text-gray-700">隐形风险与门槛项（如规培、应届、工作年限）：</span>
+                    <ul id="ai-risks-list" class="list-disc list-inside text-gray-600 mt-1 space-y-1">
+                        <li>计算中...</li>
+                    </ul>
+                </div>
+                <div>
+                    <span class="font-bold text-gray-700">避坑指导建议：</span>
+                    <p id="ai-pitfalls-advice" class="text-amber-700 mt-1 bg-amber-50 p-2.5 rounded border border-amber-200">计算中...</p>
+                </div>
+            </div>
+            <div class="flex justify-end pt-3 border-t">
+                <button onclick="closeAiModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS 逻辑 -->
+    <script>
+        let chartsInitialized = false;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadStats();
+            loadJobs();
+        });
+
+        async function triggerRecalculate() {
+            const btn = document.getElementById('recalc-btn-text');
+            if (!confirm('是否重新计算全库所有岗位的预防医学匹配星级、编制判定置信度与证据链？')) {
+                return;
+            }
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 重算中...';
+            try {
+                const res = await fetch('/api/v1/web/jobs/recalculate', { method: 'POST' });
+                const data = await res.json();
+                alert(data.message || '重算完成！');
+                loadStats();
+                loadJobs();
+            } catch (err) {
+                alert('重算请求失败: ' + err.message);
+            } finally {
+                btn.innerHTML = '全量智能重算';
+            }
+        }
+
+        function toggleExportMenu() {
+            const el = document.getElementById('export-dropdown');
+            el.classList.toggle('hidden');
+        }
+
+        // 点击页面任意外部区域关闭导出下拉
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('.relative')) {
+                const el = document.getElementById('export-dropdown');
+                if (el && !el.classList.contains('hidden')) {
+                    el.classList.add('hidden');
+                }
+            }
+        });
+
+        function triggerExport(format) {
+            const p = document.getElementById('filter-province').value.trim();
+            const s = document.getElementById('filter-star').value;
+            const b = document.getElementById('filter-bianzhi').value;
+            const k = document.getElementById('filter-keyword').value.trim();
+
+            const params = new URLSearchParams();
+            params.append('format', format);
+            if (p) params.append('province', p);
+            if (s) params.append('min_star', s);
+            if (b !== '') params.append('is_bianzhi', b);
+            if (k) params.append('keyword', k);
+
+            window.open(`/api/v1/web/jobs/export?${params.toString()}`, '_blank');
+            document.getElementById('export-dropdown').classList.add('hidden');
+        }
+
+        async function toggleVisualPanel() {
+            const panel = document.getElementById('visual-charts-section');
+            const btnText = document.getElementById('visual-btn-text');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                btnText.innerText = '收起统计图表';
+                if (!chartsInitialized) {
+                    await initAndRenderCharts();
+                    chartsInitialized = true;
+                }
+            } else {
+                panel.classList.add('hidden');
+                btnText.innerText = '查看统计图表';
+            }
+        }
+
+        async function initAndRenderCharts() {
+            try {
+                const res = await fetch('/api/v1/web/analytics/distribution');
+                const data = await res.json();
+
+                // 1. 省份柱状图
+                const provChart = echarts.init(document.getElementById('chart-province'));
+                const provNames = (data.province_distribution || []).slice(0, 7).map(x => x.province);
+                const provValues = (data.province_distribution || []).slice(0, 7).map(x => x.count);
+                provChart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                    xAxis: { type: 'category', data: provNames, axisLabel: { fontSize: 10, interval: 0, rotate: 20 } },
+                    yAxis: { type: 'value' },
+                    series: [{ data: provValues, type: 'bar', itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] } }]
+                });
+
+                // 2. 星级饼图
+                const starChart = echarts.init(document.getElementById('chart-stars'));
+                const starSeriesData = (data.star_distribution || []).map(x => ({ name: x.level, value: x.count }));
+                starChart.setOption({
+                    tooltip: { trigger: 'item' },
+                    series: [{
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        data: starSeriesData,
+                        color: ['#f59e0b', '#3b82f6', '#10b981', '#6b7280', '#9ca3af']
+                    }]
+                });
+
+                // 3. 单位性质环图
+                const unitChart = echarts.init(document.getElementById('chart-units'));
+                const unitSeriesData = (data.unit_distribution || []).slice(0, 5).map(x => ({ name: x.unit_type, value: x.count }));
+                unitChart.setOption({
+                    tooltip: { trigger: 'item' },
+                    series: [{
+                        type: 'pie',
+                        radius: '70%',
+                        data: unitSeriesData,
+                        color: ['#06b6d4', '#8b5cf6', '#ec4899', '#f97316', '#84cc16']
+                    }]
+                });
+
+                // 4. 编制形式饼图
+                const bzChart = echarts.init(document.getElementById('chart-bianzhi'));
+                const bzSeriesData = (data.bianzhi_distribution || []).slice(0, 5).map(x => ({ name: x.bianzhi_type, value: x.count }));
+                bzChart.setOption({
+                    tooltip: { trigger: 'item' },
+                    series: [{
+                        type: 'pie',
+                        radius: ['35%', '65%'],
+                        data: bzSeriesData,
+                        color: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#64748b']
+                    }]
+                });
+
+                window.addEventListener('resize', () => {
+                    provChart.resize();
+                    starChart.resize();
+                    unitChart.resize();
+                    bzChart.resize();
+                });
+            } catch (e) {
+                console.error("加载图表数据失败", e);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/v1/web/dashboard/stats');
+                const data = await res.json();
+                document.getElementById('stat-total-jobs').innerText = data.total_jobs;
+                document.getElementById('stat-5star-jobs').innerText = data.five_star_jobs;
+                document.getElementById('stat-bianzhi-jobs').innerText = data.bianzhi_jobs;
+                document.getElementById('stat-beian-jobs').innerText = data.beian_jobs;
+                document.getElementById('stat-today-jobs').innerText = data.today_jobs;
+                document.getElementById('stat-sources').innerText = data.total_sources;
+            } catch (e) {
+                console.error("加载统计数据失败", e);
+            }
+        }
+
+        async function loadJobs() {
+            const p = document.getElementById('filter-province').value.trim();
+            const s = document.getElementById('filter-star').value;
+            const b = document.getElementById('filter-bianzhi').value;
+            const k = document.getElementById('filter-keyword').value.trim();
+
+            const params = new URLSearchParams();
+            if (p) params.append('province', p);
+            if (s) params.append('min_star', s);
+            if (b !== '') params.append('is_bianzhi', b);
+            if (k) params.append('keyword', k);
+
+            try {
+                const res = await fetch(`/api/v1/web/jobs?${params.toString()}`);
+                const data = await res.json();
+                renderJobs(data.items);
+                document.getElementById('job-count-badge').innerText = `共 ${data.total} 条`;
+            } catch (e) {
+                console.error("加载岗位列表失败", e);
+            }
+        }
+
+        function renderJobs(items) {
+            const tbody = document.getElementById('job-list-body');
+            if (!items || items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="px-6 py-8 text-center text-gray-400">未检索到匹配的招考岗位</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            items.forEach(j => {
+                // 优先级
+                let pClass = 'badge-c';
+                let pLevel = j.priority_level || 'B';
+                if (pLevel === 'S') pClass = 'badge-s';
+                else if (pLevel === 'A') pClass = 'badge-a';
+                else if (pLevel === 'B') pClass = 'badge-b';
+
+                // 编制
+                let bzTag = '<span class="px-2 py-0.5 rounded text-xs tag-green font-medium">🟢 事业编</span>';
+                if (j.is_bianzhi === 2) bzTag = '<span class="px-2 py-0.5 rounded text-xs tag-yellow font-medium">🟡 备案/存疑</span>';
+                if (j.is_bianzhi === 0) bzTag = '<span class="px-2 py-0.5 rounded text-xs tag-red font-medium">🔴 编外合同</span>';
+
+                // 星级
+                let starStr = '⭐'.repeat(j.match_level || 3);
+
+                // 画像门槛与人才优待标签
+                let profileTags = [];
+                if (j.talent_tags) {
+                    j.talent_tags.split(',').forEach(tag => {
+                        const t = tag.trim();
+                        if (t === '免笔试') {
+                            profileTags.push('<span class="bg-amber-100 text-amber-800 border border-amber-300 font-bold px-1.5 py-0.5 rounded text-xs"><i class="fa-solid fa-bolt mr-0.5"></i>免笔试</span>');
+                        } else if (t.includes('人才') || t.includes('高层次')) {
+                            profileTags.push(`<span class="bg-purple-100 text-purple-800 border border-purple-200 px-1.5 py-0.5 rounded text-xs">${t}</span>`);
+                        } else {
+                            profileTags.push(`<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-xs">${t}</span>`);
+                        }
+                    });
+                }
+                if (j.is_fresh_grad === 1) profileTags.push('<span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-xs">限应届</span>');
+                if (j.is_training_required === 1) profileTags.push('<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-xs">需规培</span>');
+                if (j.age_limit_num) profileTags.push(`<span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-xs">≤${j.age_limit_num}岁</span>`);
+
+                // 倒计时与临期状态
+                let deadlineHtml = '<span class="text-gray-400">见公告</span>';
+                if (j.apply_end_date) {
+                    const cleanDate = j.apply_end_date.split('T')[0];
+                    if (j.days_left !== null && j.days_left !== undefined) {
+                        if (j.days_left < 0) {
+                            deadlineHtml = `<div class="text-gray-400 line-through text-xs">${cleanDate}</div><div class="text-[10px] text-gray-400">已截止</div>`;
+                        } else if (j.days_left === 0) {
+                            deadlineHtml = `<div class="text-red-600 font-bold text-xs">${cleanDate}</div><div class="text-[11px] font-black text-white bg-red-600 px-1.5 py-0.5 rounded urgent-pulse inline-block">今日截止!</div>`;
+                        } else if (j.days_left <= 3) {
+                            deadlineHtml = `<div class="text-orange-600 font-semibold text-xs">${cleanDate}</div><div class="text-[11px] font-bold text-orange-800 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-300 inline-block urgent-pulse">仅剩 ${j.days_left} 天</div>`;
+                        } else {
+                            deadlineHtml = `<div class="text-gray-700 text-xs">${cleanDate}</div><div class="text-[11px] text-emerald-600">剩 ${j.days_left} 天</div>`;
+                        }
+                    } else {
+                        deadlineHtml = `<div class="text-gray-700 text-xs">${cleanDate}</div>`;
+                    }
+                }
+
+                html += `
+                <tr class="hover:bg-gray-50 transition border-b">
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-black ${pClass}">${pLevel} 级</span>
+                    </td>
+                    <td class="px-4 py-3 font-medium text-gray-700">${j.province || '全国'}</td>
+                    <td class="px-4 py-3">
+                        <div class="font-bold text-gray-900">${j.unit_name}</div>
+                        <div class="text-xs text-gray-400">${j.unit_type || '事业单位'}</div>
+                    </td>
+                    <td class="px-4 py-3 font-semibold text-blue-600">${j.job_name}</td>
+                    <td class="px-4 py-3 font-bold text-gray-700">${j.headcount || 1} 人</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 max-w-xs">
+                        <div class="font-medium text-gray-800">${j.education || '不限'}</div>
+                        <div class="truncate text-gray-500" title="${j.major_raw}">${j.major_raw || '不限'}</div>
+                    </td>
+                    <td class="px-4 py-3 text-xs font-bold text-amber-500">${starStr}</td>
+                    <td class="px-4 py-3">${bzTag}</td>
+                    <td class="px-4 py-3"><div class="flex flex-wrap gap-1">${profileTags.join('') || '<span class="text-gray-400 text-xs">无特殊限制</span>'}</div></td>
+                    <td class="px-4 py-3">${deadlineHtml}</td>
+                    <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+                        <button onclick="triggerAiRisk(${j.id}, '${j.unit_name}', '${j.job_name}')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded text-xs font-medium transition" title="AI 报考资格与风险研判">
+                            <i class="fa-solid fa-robot"></i> 研判
+                        </button>
+                        ${j.url ? `<a href="${j.url}" target="_blank" class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition" title="查看原文"><i class="fa-solid fa-arrow-up-right-from-square"></i> 原文</a>` : ''}
+                    </td>
+                </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-province').value = '';
+            document.getElementById('filter-star').value = '';
+            document.getElementById('filter-bianzhi').value = '';
+            document.getElementById('filter-keyword').value = '';
+            loadJobs();
+        }
+
+        async function triggerAiRisk(jobId, unitName, jobName) {
+            document.getElementById('ai-modal').classList.remove('hidden');
+            document.getElementById('ai-modal-subtitle').innerText = `${unitName} - ${jobName}`;
+            document.getElementById('ai-eligible-summary').innerText = 'AI 专家正在分析岗位报考风险与隐形门槛...';
+            document.getElementById('ai-major-analysis').innerText = '计算中...';
+            document.getElementById('ai-risks-list').innerHTML = '<li>加载中...</li>';
+            document.getElementById('ai-pitfalls-advice').innerText = '加载中...';
+
+            try {
+                const res = await fetch(`/api/v1/ai/analyze_job/${jobId}`);
+                const data = await res.json();
+                
+                document.getElementById('ai-eligible-summary').innerText = data.is_eligible_summary || '初审资格符合';
+                document.getElementById('ai-major-analysis').innerText = data.major_compliance || '专业契合度良好';
+                
+                const risks = data.experience_cert_risks || [];
+                const riskUl = document.getElementById('ai-risks-list');
+                if (risks.length > 0) {
+                    riskUl.innerHTML = risks.map(r => `<li>${r}</li>`).join('');
+                } else {
+                    riskUl.innerHTML = '<li class="text-green-600">未发现严苛工作经历或职称隐形卡点</li>';
+                }
+
+                document.getElementById('ai-pitfalls-advice').innerText = data.pitfalls_advice || '建议密切关注资格复审材料清单与现场确认要求。';
+            } catch (e) {
+                document.getElementById('ai-eligible-summary').innerText = '分析失败，请检查网络或后端 AI 服务';
+            }
+        }
+
+        function closeAiModal() {
+            document.getElementById('ai-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
