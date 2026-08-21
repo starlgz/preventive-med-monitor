@@ -93,6 +93,9 @@ PROVINCE_SOURCES: List[Dict[str, Any]] = [
     {"code": "chengdu_cdc", "name": "成都市疾病预防控制中心", "province": "四川省", "city": "成都市", "url": "http://www.cdcdc.org", "category": "副省级疾控/官方"},
     {"code": "qingdao_cdc", "name": "青岛市疾病预防控制中心", "province": "山东省", "city": "青岛市", "url": "http://www.qddpc.cn", "category": "计划单列市疾控/官方"},
     {"code": "xian_cdc", "name": "西安市疾病预防控制中心", "province": "陕西省", "city": "西安市", "url": "http://www.xacdcp.org.cn", "category": "副省级疾控/官方"},
+    {"code": "xiamen_cdc", "name": "厦门市疾病预防控制中心", "province": "福建省", "city": "厦门市", "url": "http://www.xmcdc.com.cn", "category": "计划单列市疾控/官方"},
+    {"code": "dalian_cdc", "name": "大连市疾病预防控制中心", "province": "辽宁省", "city": "大连市", "url": "http://www.dlcdc.org.cn", "category": "计划单列市疾控/官方"},
+    {"code": "ningbo_cdc", "name": "宁波市疾病预防控制中心", "province": "浙江省", "city": "宁波市", "url": "http://www.nbcdc.org.cn", "category": "计划单列市疾控/官方"},
 ]
 
 PROVINCES_SOURCE_POOL = PROVINCE_SOURCES
