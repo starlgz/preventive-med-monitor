@@ -31,6 +31,13 @@ PROVINCE_SOURCES: List[Dict[str, Any]] = [
     {"code": "hebei_cdc", "name": "河北省疾病预防控制中心", "province": "河北省", "url": "http://www.hebicdc.cn", "category": "省级疾控/官方"},
     {"code": "shanxi_cdc", "name": "山西省疾病预防控制中心", "province": "山西省", "url": "http://www.sxcdc.cn", "category": "省级疾控/官方"},
     {"code": "jiangxi_cdc", "name": "江西省疾病预防控制中心", "province": "江西省", "url": "http://www.jxcde.com", "category": "省级疾控/官方"},
+    {"code": "gansu_cdc", "name": "甘肃省疾病预防控制中心", "province": "甘肃省", "url": "http://www.gscdc.net", "category": "省级疾控/官方"},
+    {"code": "qinghai_cdc", "name": "青海省疾病预防控制中心", "province": "青海省", "url": "http://www.qhcdc.org.cn", "category": "省级疾控/官方"},
+    {"code": "ningxia_cdc", "name": "宁夏回族自治区疾病预防控制中心", "province": "宁夏回族自治区", "url": "http://www.nxcdc.org", "category": "省级疾控/官方"},
+    {"code": "xinjiang_cdc", "name": "新疆维吾尔自治区疾病预防控制中心", "province": "新疆维吾尔自治区", "url": "http://www.xjcdc.com", "category": "省级疾控/官方"},
+    {"code": "xizang_wsjkw", "name": "西藏自治区卫生健康委员会", "province": "西藏自治区", "url": "http://wjw.xizang.gov.cn", "category": "卫健委/官方"},
+    {"code": "tianjin_cdc", "name": "天津市疾病预防控制中心", "province": "天津市", "url": "http://www.tjcdc.cn", "category": "省级疾控/官方"},
+    {"code": "neimenggu_cdc", "name": "内蒙古自治区疾病预防控制中心", "province": "内蒙古自治区", "url": "http://www.nmgcdc.cn", "category": "省级疾控/官方"},
 
     # 华东地区
     {"code": "zhejiang_wsjkw", "name": "浙江省卫生健康委员会", "province": "浙江省", "url": "https://wsjkw.zj.gov.cn", "category": "卫健委/官方"},
