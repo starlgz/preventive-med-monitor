@@ -197,6 +197,11 @@ async def get_jobs_list(
             pitfall_items = p_res["pitfall_items"]
             pitfall_risk = p_res["risk_level"]
 
+        # 解析细分专业与学历提取
+        sub_disciplines = {}
+        if job.major_raw:
+            sub_disciplines = MajorMatcher.find_sub_disciplines(f"{job.major_raw} {job.job_name}")
+
         items.append({
             "id": job.id,
             "province": job.province,
@@ -209,9 +214,11 @@ async def get_jobs_list(
             "major_raw": job.major_raw,
             "match_level": job.match_level,
             "match_reason": getattr(job, "match_reason", "精准匹配"),
+            "sub_disciplines": sub_disciplines,
             "is_bianzhi": job.is_bianzhi,
             "bianzhi_type": job.bianzhi_type or ("事业编制" if job.is_bianzhi == 1 else "其他"),
             "evidence_chain": getattr(job, "bianzhi_evidence", None),
+            "bianzhi_confidence": getattr(job, "bianzhi_confidence", 0.95 if job.is_bianzhi == 1 else 0.5),
             "priority_level": job.priority_level,
             "is_fresh_grad": job.is_fresh_grad,
             "is_training_required": job.is_training_required,
@@ -357,7 +364,7 @@ async def recalculate_jobs_evaluations(session: AsyncSession = Depends(get_db)):
         major_res = MajorMatcher.match(major_raw=job.major_raw or "", job_name=job.job_name or "")
         job.match_level = major_res["match_level"]
         job.match_reason = major_res.get("match_reason")
-        
+
         bianzhi_res = BianzhiEvaluator.evaluate(
             job_name=job.job_name or "",
             unit_name=job.unit_name or "",

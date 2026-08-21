@@ -15,6 +15,14 @@ PROVINCE_SOURCES: List[Dict[str, Any]] = [
     {"code": "shandong_cdc", "name": "山东省疾病预防控制中心", "province": "山东省", "url": "http://www.sdcdc.cn", "category": "省级疾控/官方"},
     {"code": "hubei_cdc", "name": "湖北省疾病预防控制中心", "province": "湖北省", "url": "https://www.hbcdc.com", "category": "省级疾控/官方"},
     {"code": "sichuan_cdc", "name": "四川省疾病预防控制中心", "province": "四川省", "url": "http://www.sccdpc.gov.cn", "category": "省级疾控/官方"},
+    {"code": "henan_cdc", "name": "河南省疾病预防控制中心", "province": "河南省", "url": "http://www.hncdc.com.cn", "category": "省级疾控/官方"},
+    {"code": "hunan_cdc", "name": "湖南省疾病预防控制中心", "province": "湖南省", "url": "http://www.hncdc.com", "category": "省级疾控/官方"},
+    {"code": "anhui_cdc", "name": "安徽省疾病预防控制中心", "province": "安徽省", "url": "http://www.ahcdc.cn", "category": "省级疾控/官方"},
+    {"code": "fujian_cdc", "name": "福建省疾病预防控制中心", "province": "福建省", "url": "http://www.fjcdc.com.cn", "category": "省级疾控/官方"},
+    {"code": "shaanxi_cdc", "name": "陕西省疾病预防控制中心", "province": "陕西省", "url": "http://www.sxcdc.com", "category": "省级疾控/官方"},
+    {"code": "hebei_cdc", "name": "河北省疾病预防控制中心", "province": "河北省", "url": "http://www.hebicdc.cn", "category": "省级疾控/官方"},
+    {"code": "shanxi_cdc", "name": "山西省疾病预防控制中心", "province": "山西省", "url": "http://www.sxcdc.cn", "category": "省级疾控/官方"},
+    {"code": "jiangxi_cdc", "name": "江西省疾病预防控制中心", "province": "江西省", "url": "http://www.jxcde.com", "category": "省级疾控/官方"},
 
     # 华东地区
     {"code": "zhejiang_wsjkw", "name": "浙江省卫生健康委员会", "province": "浙江省", "url": "https://wsjkw.zj.gov.cn", "category": "卫健委/官方"},
@@ -59,7 +67,7 @@ PROVINCE_SOURCES: List[Dict[str, Any]] = [
     {"code": "gansu_rsks", "name": "甘肃省人力资源和社会保障厅", "province": "甘肃省", "url": "http://rst.gansu.gov.cn", "category": "人社局/官方"},
     {"code": "qinghai_wsjkw", "name": "青海省卫生健康委员会", "province": "青海省", "url": "https://wsjkw.qinghai.gov.cn", "category": "卫健委/官方"},
     {"code": "ningxia_rsks", "name": "宁夏人事考试中心", "province": "宁夏回族自治区", "url": "https://www.nxpta.com", "category": "人事考试网"},
-    {"code": "xinjiang_rsks", "name": "新疆人事考试中心", "province": "新疆维吾尔自治区", "url": "http://www.xjrsks.com.cn", "category": "人事考试网"},
+    {"code": "xinjiang_rsks", "name": "新疆人事考试中心", "province": "新疆维望尔自治区", "url": "http://www.xjrsks.com.cn", "category": "人事考试网"},
 
     # 东北地区
     {"code": "liaoning_wsjkw", "name": "辽宁省卫生健康委员会", "province": "辽宁省", "url": "https://wsjk.ln.gov.cn", "category": "卫健委/官方"},
