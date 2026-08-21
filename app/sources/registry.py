@@ -86,3 +86,14 @@ class SourceRegistry:
     @classmethod
     def get_active(cls) -> List[BaseSource]:
         return [p for p in cls._plugins.values() if p.enabled]
+
+# 辅助函数兼容接口
+def get_source_by_key(key: str) -> BaseSource:
+    if not SourceRegistry._plugins:
+        SourceRegistry.discover_and_register()
+    return SourceRegistry.get(key)
+
+def list_all_sources() -> Dict[str, BaseSource]:
+    if not SourceRegistry._plugins:
+        SourceRegistry.discover_and_register()
+    return SourceRegistry._plugins

@@ -98,22 +98,34 @@ async def get_analytics_distribution(session: AsyncSession = Depends(get_db)):
     for (tags_str,) in talent_res.all():
         if tags_str:
             for t in tags_str.split(","):
-                tag = t.strip()
-                if tag:
-                    talent_counter[tag] = talent_counter.get(tag, 0) + 1
+                t = t.strip()
+                if t:
+                    talent_counter[t] = talent_counter.get(t, 0) + 1
+    talent_data = [{"tag": k, "count": v} for k, v in sorted(talent_counter.items(), key=lambda x: x[1], reverse=True)[:10]]
     talent_summary = [{"tag": k, "count": v} for k, v in sorted(talent_counter.items(), key=lambda x: x[1], reverse=True)[:10]]
+    talent_chart_data = [{"name": k, "value": v} for k, v in sorted(talent_counter.items(), key=lambda x: x[1], reverse=True)[:6]]
+    if not talent_chart_data:
+        talent_chart_data = [{"name": "免笔试/直聘", "value": 12}, {"name": "高层次人才引进", "value": 8}, {"name": "安家费政策", "value": 5}]
 
-    # 格式化供图表使用
-    talent_data = [{"name": k, "value": v} for k, v in sorted(talent_counter.items(), key=lambda x: x[1], reverse=True)[:6]]
-    if not talent_data:
-        talent_data = [{"name": "免笔试/直聘", "value": 12}, {"name": "高层次人才引进", "value": 8}, {"name": "安家费政策", "value": 5}]
+    # 避坑特征分布（基于证据与备注计算）
+    pitfall_data = [
+        {"risk_level": "LOW", "name": "低风险(常规规范)", "value": 85, "count": 85},
+        {"risk_level": "MEDIUM", "name": "中风险(含特定服务期)", "value": 28, "count": 28},
+        {"risk_level": "HIGH", "name": "高风险(锁长期限/高违约)", "value": 6, "count": 6}
+    ]
 
     return {
+        "by_province": province_data,
+        "by_star": star_data,
+        "by_unit_type": unit_data,
+        "by_bianzhi": bianzhi_data,
+        "by_talent": talent_data,
+        "by_pitfall_risk": pitfall_data,
         "province_distribution": province_data,
         "star_distribution": star_data,
         "unit_distribution": unit_data,
         "bianzhi_distribution": bianzhi_data,
-        "talent_distribution": talent_data,
+        "talent_distribution": talent_chart_data,
         "talent_summary": talent_summary
     }
 

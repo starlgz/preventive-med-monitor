@@ -34,6 +34,7 @@ class BianzhiEvaluator:
     BEIAN_KEYWORDS = [
         (r"人员总量|人员总量管理", "人员总量管理", "采用公立医院人员总量管理"),
         (r"备案制人员|备案制编制|公立医院备案制|员额备案制", "备案制管理", "属于公立医院人员备案制管理"),
+        (r"公立医院公卫科.*员额|公立三甲.*报备员额|院感科.*员额", "三甲公立医院公卫员额", "公立医院公共卫生/院感岗位实行报备员额制管理"),
         (r"报备员额|员额制", "报备员额", "实行事业单位报备员额制管理"),
         (r"控制总量", "控制总量", "纳入事业单位人员控制总量管理"),
     ]
@@ -41,8 +42,11 @@ class BianzhiEvaluator:
     # 4. 全额事业编强证据
     QUAN_E_KEYWORDS = [
         (r"公益一类事业(单位|编制)", "公益一类事业单位", "单位性质为公益一类全额拨款事业单位", "全额事业编"),
-        (r"财政全额拨款|全额拨款事业(单位|编制)|全额补助", "全额拨款事业单位", "财政全额拨款事业单位编制", "全额事业编"),
-        (r"实名制事业编制|实名制编制|事业编制实名制|机构编制实名制", "实名制编制", "办理实名制事业单位录用入编手续", "全额事业编"),
+        (r"财政全额拨款|全额拨款事业(单位|编制)|财政全额核拨|全额补助", "全额拨款事业单位", "财政全额拨款事业单位编制", "全额事业编"),
+        (r"财政补助事业(单位|编制)", "财政补助事业单位", "财政补助事业单位正式编制", "全额事业编"),
+        (r"实名制事业编制|实名制编制|事业编制实名制|机构编制实名制|实名制入编", "实名制编制", "办理实名制事业单位录用入编手续", "全额事业编"),
+        (r"进站即入编|出站留编|博后带编|联合培养带编", "博士后带编引才", "高校/疾控博士后入站即落实全额事业编制", "全额事业编"),
+        (r"行政编制|公务员招录|口岸关务员|海关公务员|参公编制", "行政/参公编制", "岗位明确属于国家行政编制或参公管理", "行政编制"),
         (r"事业编制人员|正式编制人员|在编人员", "明确在编人员", "招考公告明确声明招录事业单位正式在编人员", "全额事业编"),
         (r"事业单位公开招聘工作人员|事业单位统一公开招聘", "事业单位公开招聘", "属于人社部门/卫健委统一组织的标准事业单位公开招聘", "全额事业编"),
         (r"统一公开招聘考试", "事业编统考", "属于各省市事业单位统一公开招聘考试", "全额事业编"),
@@ -132,6 +136,7 @@ class BianzhiEvaluator:
                 "bianzhi_type": b_type,
                 "confidence": 0.98 if has_dispatch else 0.95,
                 "evidence_chain": evidence_chain,
+                "evidence_details": evidence_str,
                 "bianzhi_confidence": 0.98 if has_dispatch else 0.95,
                 "bianzhi_evidence": evidence_str,
                 "risk_notes": "非编警告：此岗位为编外合同制/劳务派遣聘用，不占国家事业单位编制。",
@@ -154,6 +159,7 @@ class BianzhiEvaluator:
                 "bianzhi_type": "报备员额",
                 "confidence": 0.75,
                 "evidence_chain": evidence_chain,
+                "evidence_details": evidence_str,
                 "bianzhi_confidence": 0.75,
                 "bianzhi_evidence": evidence_str,
                 "risk_notes": "存疑提示：该岗位属于公立医院改革推广的报备员额/总量备案制，薪酬福利对标在编但无实名制编制卡。",
@@ -180,7 +186,7 @@ class BianzhiEvaluator:
         # 全额拨款检查
         for pat, term, reason, b_type in cls.QUAN_E_KEYWORDS:
             if re.search(pat, full_text):
-                score += 0.4
+                score += 0.55
                 if term not in evidence_chain:
                     evidence_chain.append(term)
                 evidence_list.append(f"【确编证据】{reason}")
@@ -201,27 +207,29 @@ class BianzhiEvaluator:
         # ----------------------------------------------------
         # 阶段 5: 综合决策阈值判定
         # ----------------------------------------------------
-        if strong_found and score >= 0.6:
-            confidence = min(round(0.5 + score * 0.4, 2), 0.98)
+        if strong_found and score >= 0.5:
+            confidence = min(round(0.85 + score * 0.15, 2), 0.99)
             evidence_str = "; ".join(evidence_list)
             return {
                 "is_bianzhi": 1,
                 "bianzhi_type": determined_type,
                 "confidence": confidence,
                 "evidence_chain": evidence_chain,
+                "evidence_details": evidence_str,
                 "bianzhi_confidence": confidence,
                 "bianzhi_evidence": evidence_str,
                 "risk_notes": "正式在编：确认为国家事业单位正式实名制编制，享有完备的体制内保障。",
                 "action_advice": "建议重点关注并按时完成报名与资格审查。"
             }
         elif strong_found or score >= 0.35:
-            confidence = round(0.5 + score * 0.3, 2)
+            confidence = min(round(0.70 + score * 0.2, 2), 0.92)
             evidence_str = "; ".join(evidence_list)
             return {
                 "is_bianzhi": 1,
                 "bianzhi_type": determined_type,
                 "confidence": confidence,
                 "evidence_chain": evidence_chain,
+                "evidence_details": evidence_str,
                 "bianzhi_confidence": confidence,
                 "bianzhi_evidence": evidence_str,
                 "risk_notes": "高概率在编：命中多项事业单位公开招考特征。",
@@ -236,6 +244,7 @@ class BianzhiEvaluator:
                 "bianzhi_type": b_type,
                 "confidence": 0.45,
                 "evidence_chain": evidence_chain,
+                "evidence_details": evidence_str,
                 "bianzhi_confidence": 0.45,
                 "bianzhi_evidence": evidence_str,
                 "risk_notes": "编制存疑：简章中未明确标注事业单位正式编制、员额制或编外用工属性。",

@@ -84,10 +84,15 @@ PROVINCE_SOURCES: List[Dict[str, Any]] = [
     {"code": "ningxia_rsks", "name": "宁夏人事考试中心", "province": "宁夏回族自治区", "url": "https://www.nxpta.com", "category": "人事考试网"},
     {"code": "xinjiang_rsks", "name": "新疆人事考试中心", "province": "新疆维望尔自治区", "url": "http://www.xjrsks.com.cn", "category": "人事考试网"},
 
-    # 东北地区
-    {"code": "liaoning_wsjkw", "name": "辽宁省卫生健康委员会", "province": "辽宁省", "url": "https://wsjk.ln.gov.cn", "category": "卫健委/官方"},
-    {"code": "jilin_wsjkw", "name": "吉林省卫生健康委员会", "province": "吉林省", "url": "http://wsjkw.jl.gov.cn", "category": "卫健委/官方"},
-    {"code": "heilongjiang_rsks", "name": "黑龙江省人事考试网", "province": "黑龙江省", "url": "http://www.hljrsks.org.cn", "category": "人事考试网"}
+    # 核心副省级城市及计划单列市疾控中心
+    {"code": "shenzhen_cdc", "name": "深圳市疾病预防控制中心", "province": "广东省", "city": "深圳市", "url": "http://szzx.sz.gov.cn", "category": "副省级疾控/官方"},
+    {"code": "guangzhou_cdc", "name": "广州市疾病预防控制中心", "province": "广东省", "city": "广州市", "url": "http://www.gzcdc.org.cn", "category": "副省级疾控/官方"},
+    {"code": "hangzhou_cdc", "name": "杭州市疾病预防控制中心", "province": "浙江省", "city": "杭州市", "url": "http://www.hzcdc.net", "category": "副省级疾控/官方"},
+    {"code": "nanjing_cdc", "name": "南京市疾病预防控制中心", "province": "江苏省", "city": "南京市", "url": "http://www.njcdc.cn", "category": "副省级疾控/官方"},
+    {"code": "wuhan_cdc", "name": "武汉市疾病预防控制中心", "province": "湖北省", "city": "武汉市", "url": "http://www.whcdc.org", "category": "副省级疾控/官方"},
+    {"code": "chengdu_cdc", "name": "成都市疾病预防控制中心", "province": "四川省", "city": "成都市", "url": "http://www.cdcdc.org", "category": "副省级疾控/官方"},
+    {"code": "qingdao_cdc", "name": "青岛市疾病预防控制中心", "province": "山东省", "city": "青岛市", "url": "http://www.qddpc.cn", "category": "计划单列市疾控/官方"},
+    {"code": "xian_cdc", "name": "西安市疾病预防控制中心", "province": "陕西省", "city": "西安市", "url": "http://www.xacdcp.org.cn", "category": "副省级疾控/官方"},
 ]
 
 PROVINCES_SOURCE_POOL = PROVINCE_SOURCES

@@ -75,10 +75,20 @@ class PitfallExtractor:
 
         # 2. 违约金/赔偿限制
         penalty_warning = 0
-        if re.search(r"违约责任|违约金|赔偿.*金|退还.*补贴|未满服务期.*退回", full_text):
+        if re.search(r"违约责任|违约金|赔偿.*金|退还.*补贴|未满服务期.*退回|落户违约赔偿|离职退还安家费", full_text):
             penalty_warning = 1
             pitfalls.append("⚠️ 明确提及提前离职违约赔偿或退回安家费/补贴条款")
             risk_score += 2
+
+        # 2.1 专业代码强一致性限制
+        if re.search(r"专业代码强一致性|仅限对应目录代码|代码不一致不予认可|跨专业或自设专业不予认可|专业代码须完全一致", full_text):
+            pitfalls.append("🔍 资格审查红线：要求专业代码强一致，自设专业或跨专业方向可能被初审驳回")
+            risk_score += 1
+
+        # 2.2 高危应急值班与夜班
+        if re.search(r"常年高危涉化涉疫处置|24小时应急流调值班|涉疫涉化现场高风险作业|突发公卫一线应急值守", full_text):
+            pitfalls.append("⚡ 工作强度预警：常年涉及24小时应急值班或高风险现场涉化涉疫处置")
+            risk_score += 1
 
         # 3. 政治面貌门槛
         is_party_required = 0
@@ -104,7 +114,7 @@ class PitfallExtractor:
 
         # 5. 执业医师/专业技术资格
         cert_req = "不限/无明确要求"
-        if re.search(r"(具有|取得|持有).*?(公共卫生|公卫).*?(执业医师|执业资格)", full_text):
+        if re.search(r"(具有|取得|持有).*?(公共卫生|公卫).*?(执业医师|执业资格|资格证)", full_text) or re.search(r"注册为公共卫生类别", full_text):
             cert_req = "公共卫生执业医师资格"
         elif re.search(r"(具有|取得|持有).*?执业医师资格", full_text):
             cert_req = "执业医师资格证"
