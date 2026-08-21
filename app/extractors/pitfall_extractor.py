@@ -14,6 +14,12 @@ class PitfallExtractor:
     """
 
     @classmethod
+    def extract(cls, text: Optional[str] = None, job_desc: Optional[str] = None, announcement_text: Optional[str] = None) -> List[Dict[str, Any]]:
+        """便捷提取排坑风险条目列表"""
+        res = cls.analyze(text=text, job_desc=job_desc, announcement_text=announcement_text)
+        return res.get("pitfall_items", []) or res.get("pitfalls", [])
+
+    @classmethod
     def analyze(cls, text: Optional[str] = None, job_desc: Optional[str] = None, announcement_text: Optional[str] = None) -> Dict[str, Any]:
         combined_parts = []
         if text:

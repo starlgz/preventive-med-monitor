@@ -57,6 +57,20 @@ class TalentPolicyExtractor:
     }
 
     @classmethod
+    def _parse_amount_to_number(cls, amount_str: Optional[str]) -> Optional[int]:
+        """将包含万元、万、元等的补贴金额解析为整型数字（单位：元）"""
+        if not amount_str:
+            return None
+        m = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(万|w|元)?", str(amount_str), re.IGNORECASE)
+        if not m:
+            return None
+        num = float(m.group(1))
+        unit = m.group(2)
+        if unit in ["万", "w", "W"]:
+            return int(num * 10000)
+        return int(num)
+
+    @classmethod
     def extract_talent_policies(cls, text: str, job_title: str = "", requirements: str = "") -> Dict[str, Any]:
         """
         全面抽取文本及岗位要求中的人才引进政策
@@ -158,6 +172,9 @@ class TalentPolicyExtractor:
         elif "博士" in full_text:
             talent_level = "博士研究生"
 
+        settlement_num = cls._parse_amount_to_number(settling_allowance_val or settlement_allowance)
+        research_num = cls._parse_amount_to_number(research_fund_val or research_fund)
+
         return {
             # 扩展字段
             "is_talent_intro": is_talent_intro,
@@ -166,6 +183,8 @@ class TalentPolicyExtractor:
             "matched_policy_keywords": matched_no_exam_kw,
             "settlement_allowance": settlement_allowance,
             "settling_allowance": settling_allowance_val or settlement_allowance,
+            "housing_subsidy_amt": settlement_num,
+            "research_fund_amt": research_num,
             "research_fund": research_fund_val or research_fund,
             "special_benefits": special_benefits,
             "has_housing_or_subsidy": bool(settlement_allowance or "住房保障" in special_benefits),

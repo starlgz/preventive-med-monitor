@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 class BianzhiEvaluator:
     """
@@ -76,11 +76,19 @@ class BianzhiEvaluator:
         unit_type: str = "其他事业单位",
         other_requirements: str = "",
         announcement_title: str = "",
-        announcement_text: str = ""
+        announcement_text: str = "",
+        text: Optional[str] = None,
+        source_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         升级版编制研判评分与自然语言证据链生成
+        兼容 text 与 source_name 等直接入参
         """
+        if text:
+            announcement_text = f"{text} {announcement_text}"
+        if source_name:
+            announcement_title = f"{source_name} {announcement_title}"
+
         full_text = f"{announcement_title} {job_name} {unit_name} {other_requirements} {announcement_text[:1500]}"
         evidence_chain: List[str] = []
         evidence_list: List[str] = []
