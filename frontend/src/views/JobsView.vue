@@ -76,15 +76,41 @@
           </button>
         </div>
       </div>
+
+      <!-- Quick Preset Tags -->
+      <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+        <span class="text-xs text-slate-400 font-medium mr-1">快捷场景智选:</span>
+        <button
+          @click="applyPreset('cdc_core')"
+          class="px-2.5 py-1 rounded-md text-xs font-semibold border transition-all"
+          :class="activePreset === 'cdc_core' ? 'bg-blue-50 border-blue-300 text-blue-700 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'"
+        >
+          🏥 全国疾控 (CDC) 专场
+        </button>
+        <button
+          @click="applyPreset('five_star_bianzhi')"
+          class="px-2.5 py-1 rounded-md text-xs font-semibold border transition-all"
+          :class="activePreset === 'five_star_bianzhi' ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'"
+        >
+          🌟 5星公卫 + 正式事业编
+        </button>
+        <button
+          @click="applyPreset('fresh_grad')"
+          class="px-2.5 py-1 rounded-md text-xs font-semibold border transition-all"
+          :class="activePreset === 'fresh_grad' ? 'bg-purple-50 border-purple-300 text-purple-700 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'"
+        >
+          🎓 应届毕业生直通
+        </button>
+      </div>
     </div>
 
     <!-- Jobs Table List -->
     <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
       <div class="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <h3 class="font-bold text-slate-800 text-sm">岗位列表</h3>
-          <span class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-            共 {{ total }} 条岗位
+          <h3 class="font-bold text-slate-800 text-sm">有效招考岗位列表</h3>
+          <span class="text-xs font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+            共 {{ total }} 条有效报名岗位 (已自动剔除历史过期)
           </span>
         </div>
       </div>
@@ -345,19 +371,18 @@
           </div>
         </div>
 
-        <!-- Drawer Footer -->
-        <div class="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+        <div class="border-t border-slate-100 pt-4 flex gap-3">
           <a
             v-if="selectedJob.announcement_url"
             :href="selectedJob.announcement_url"
             target="_blank"
-            class="flex-1 text-center py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
+            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl text-center text-xs transition-colors shadow-sm"
           >
-            打开官方招聘公告原文
+            打开官方招考原文 &nearr;
           </a>
           <button
             @click="selectedJob = null"
-            class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg"
+            class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-xs transition-colors"
           >
             关闭
           </button>
@@ -371,12 +396,13 @@
 import { ref, onMounted } from 'vue'
 import { fetchJobs } from '@/api'
 
-const loading = ref(false)
 const jobs = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(15)
+const loading = ref(false)
 const selectedJob = ref(null)
+const activePreset = ref('')
 
 const provinceOptions = [
   '北京市', '上海市', '天津市', '重庆市', '广东省', '江苏省', '浙江省', '山东省',
@@ -422,6 +448,20 @@ const loadJobs = async () => {
 
 const handleSearch = () => {
   page.value = 1
+  activePreset.value = ''
+  loadJobs()
+}
+
+const applyPreset = (presetKey) => {
+  page.value = 1
+  activePreset.value = presetKey
+  if (presetKey === 'cdc_core') {
+    filters.value = { keyword: '疾控', province: '', match_level: 5, bianzhi_type: '' }
+  } else if (presetKey === 'five_star_bianzhi') {
+    filters.value = { keyword: '', province: '', match_level: 5, bianzhi_type: '事业编制' }
+  } else if (presetKey === 'fresh_grad') {
+    filters.value = { keyword: '应届', province: '', match_level: '', bianzhi_type: '' }
+  }
   loadJobs()
 }
 
@@ -432,11 +472,13 @@ const resetFilters = () => {
     match_level: '',
     bianzhi_type: ''
   }
-  handleSearch()
+  activePreset.value = ''
+  page.value = 1
+  loadJobs()
 }
 
-const changePage = (newPage) => {
-  page.value = newPage
+const changePage = (p) => {
+  page.value = p
   loadJobs()
 }
 

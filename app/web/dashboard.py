@@ -5,7 +5,7 @@ import pandas as pd
 from fastapi import APIRouter, Request, Depends, Response, Query
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, and_
 from app.core.database import get_db
 from app.models.entities import Job, Source, Announcement
 from app.rules.major_matcher import MajorMatcher
@@ -38,7 +38,7 @@ async def serve_spa_frontend(request: Request):
 @router.get("/api/v1/dashboard/stats")
 @router.get("/api/v1/web/dashboard/stats")
 async def get_dashboard_stats(session: AsyncSession = Depends(get_db)):
-    """获取大盘统计指标 (默认只统计当前未过期岗位)"""
+    """获取大盘统计指标 (严格剔除过期岗位，仅统计有效在招数据)"""
     today = date.today()
     valid_cond = or_(Job.apply_end_date >= today, Job.apply_end_date.is_(None))
 
@@ -67,7 +67,7 @@ async def get_dashboard_stats(session: AsyncSession = Depends(get_db)):
 @router.get("/api/v1/dashboard/charts")
 @router.get("/api/v1/web/analytics/distribution")
 async def get_analytics_distribution(session: AsyncSession = Depends(get_db)):
-    """全国省份招考热度与编制性质多维分布统计"""
+    """全国省份招考热度与编制性质多维分布统计 (仅统计有效在招数据)"""
     today = date.today()
     valid_cond = or_(Job.apply_end_date >= today, Job.apply_end_date.is_(None))
 
@@ -107,7 +107,7 @@ async def get_analytics_distribution(session: AsyncSession = Depends(get_db)):
     if not talent_chart_data:
         talent_chart_data = [{"name": "免笔试/直聘", "value": 12}, {"name": "高层次人才引进", "value": 8}, {"name": "安家费政策", "value": 5}]
 
-    # 避坑特征分布（基于证据与备注计算）
+    # 避坑特征分布
     pitfall_data = [
         {"risk_level": "LOW", "name": "低风险(常规规范)", "value": 85, "count": 85},
         {"risk_level": "MEDIUM", "name": "中风险(含特定服务期)", "value": 28, "count": 28},
@@ -135,48 +135,125 @@ get_dashboard_charts = get_analytics_distribution
 @router.get("/api/v1/web/jobs")
 async def get_jobs_list(
     province: Optional[str] = None,
+    provinces: Optional[str] = Query(None, description="逗号分隔的多省份筛选"),
     match_level: Optional[int] = None,
+    match_levels: Optional[str] = Query(None, description="逗号分隔的多星级筛选，如 5,4"),
     min_star: Optional[int] = None,
-    bianzhi_type: Optional[str] = None,
+    unit_type: Optional[str] = None,
+    education: Optional[str] = None,
+    educations: Optional[str] = Query(None, description="逗号分隔的学历筛选"),
     is_bianzhi: Optional[int] = None,
+    bianzhi_types: Optional[str] = Query(None, description="编制类型多选，如 1,2"),
+    is_fresh_grad: Optional[int] = None,
+    is_training_required: Optional[int] = None,
+    talent_category: Optional[str] = None,
+    pitfall_risk: Optional[str] = None,
     keyword: Optional[str] = None,
-    include_expired: bool = False,
+    search: Optional[str] = None,
+    urgent_only: Optional[bool] = None,
+    hide_expired: Optional[bool] = Query(True, description="默认只展示未过期的在招岗位"),
     page: int = 1,
     page_size: int = 20,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
     session: AsyncSession = Depends(get_db)
 ):
-    """支持多维组合筛选的岗位查询接口 (支持 Vue 前端分页及避坑研判属性)"""
-    stmt = select(Job, Announcement.url, Announcement.content_raw).outerjoin(Announcement, Job.announcement_id == Announcement.id)
+    """
+    获取岗位列表，默认严格过滤过期岗位，支持多字段多条件筛选
+    """
+    calc_limit = limit if limit is not None else page_size
+    calc_offset = offset if offset is not None else (page - 1) * calc_limit
+
+    stmt = select(Job, Announcement.url, Announcement.content_raw).outerjoin(
+        Announcement, Job.announcement_id == Announcement.id
+    )
 
     today = date.today()
-    if not include_expired:
+
+    # 1. 过期熔断与过滤 (默认开启)
+    if hide_expired:
         stmt = stmt.where(or_(Job.apply_end_date >= today, Job.apply_end_date.is_(None)))
 
-    if province:
-        stmt = stmt.where(Job.province.ilike(f"%{province}%"))
-    
-    effective_star = match_level or min_star
-    if effective_star:
-        stmt = stmt.where(Job.match_level >= effective_star)
-        
-    if is_bianzhi is not None:
+    # 2. 省份筛选 (支持单选与多选)
+    if provinces:
+        p_list = [p.strip() for p in provinces.split(",") if p.strip()]
+        if p_list:
+            stmt = stmt.where(Job.province.in_(p_list))
+    elif province and province != "全部" and province != "全国":
+        stmt = stmt.where(Job.province == province)
+
+    # 3. 星级匹配筛选 (支持单选与多选)
+    if match_levels:
+        try:
+            m_list = [int(m.strip()) for m in match_levels.split(",") if m.strip()]
+            if m_list:
+                stmt = stmt.where(Job.match_level.in_(m_list))
+        except ValueError:
+            pass
+    elif match_level is not None and match_level > 0:
+        stmt = stmt.where(Job.match_level == match_level)
+    elif min_star is not None and min_star > 0:
+        stmt = stmt.where(Job.match_level >= min_star)
+
+    # 4. 单位类型筛选
+    if unit_type and unit_type != "全部":
+        stmt = stmt.where(Job.unit_type == unit_type)
+
+    # 5. 学历筛选 (支持单选与多选)
+    if educations:
+        e_list = [e.strip() for e in educations.split(",") if e.strip()]
+        if e_list:
+            edu_conds = [Job.education.like(f"%{e}%") for e in e_list]
+            stmt = stmt.where(or_(*edu_conds))
+    elif education and education != "全部":
+        stmt = stmt.where(Job.education.like(f"%{education}%"))
+
+    # 6. 编制属性筛选 (支持多选)
+    if bianzhi_types:
+        try:
+            b_list = [int(b.strip()) for b in bianzhi_types.split(",") if b.strip()]
+            if b_list:
+                stmt = stmt.where(Job.is_bianzhi.in_(b_list))
+        except ValueError:
+            pass
+    elif is_bianzhi is not None:
         stmt = stmt.where(Job.is_bianzhi == is_bianzhi)
-    elif bianzhi_type:
-        stmt = stmt.where(Job.bianzhi_type.ilike(f"%{bianzhi_type}%"))
 
-    if keyword:
-        k_filter = f"%{keyword}%"
-        stmt = stmt.where(
-            (Job.unit_name.ilike(k_filter)) |
-            (Job.job_name.ilike(k_filter)) |
-            (Job.major_raw.ilike(k_filter))
+    # 7. 应届生与规培
+    if is_fresh_grad is not None:
+        stmt = stmt.where(Job.is_fresh_grad == is_fresh_grad)
+    if is_training_required is not None:
+        stmt = stmt.where(Job.is_training_required == is_training_required)
+
+    # 8. 人才政策标签
+    if talent_category and talent_category != "全部":
+        stmt = stmt.where(Job.talent_tags.like(f"%{talent_category}%"))
+
+    # 9. 避坑风险级别
+    if pitfall_risk and pitfall_risk != "全部":
+        stmt = stmt.where(Job.pitfall_risk == pitfall_risk.lower())
+
+    # 10. 紧急临期筛选 (3天内截止)
+    if urgent_only:
+        stmt = stmt.where(Job.apply_end_date >= today, Job.apply_end_date <= func.date(today, '+3 days'))
+
+    # 11. 全文关键词搜索
+    kw = keyword or search
+    if kw:
+        kw = kw.strip()
+        kw_cond = or_(
+            Job.job_name.like(f"%{kw}%"),
+            Job.unit_name.like(f"%{kw}%"),
+            Job.major_raw.like(f"%{kw}%"),
+            Job.cert_requirements.like(f"%{kw}%")
         )
+        stmt = stmt.where(kw_cond)
 
-    calc_limit = limit if limit is not None else page_size
-    calc_offset = offset if offset is not None else (page - 1) * page_size
+    # 获取满足条件的总数
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await session.scalar(count_stmt)) or 0
 
+    # 排序：优先按匹配星级降序、发布/截止时间排
     stmt = stmt.order_by(Job.match_level.desc(), Job.id.desc()).limit(calc_limit).offset(calc_offset)
     res = await session.execute(stmt)
     rows = res.all()
@@ -201,7 +278,6 @@ async def get_jobs_list(
                 pitfall_items = [str(job.pitfall_items)]
             pitfall_risk = getattr(job, "pitfall_risk", "low") or "low"
         else:
-            # 即时提取兜底
             p_res = PitfallExtractor.analyze(
                 job_desc=f"{job.job_name} {job.cert_requirements or ''} {job.major_raw or ''}",
                 announcement_text=(ann_content or "")[:3000]
@@ -209,7 +285,7 @@ async def get_jobs_list(
             pitfall_items = p_res["pitfall_items"]
             pitfall_risk = p_res["risk_level"]
 
-        # 解析细分专业与学历提取
+        # 解析细分专业
         sub_disciplines = {}
         if job.major_raw:
             sub_disciplines = MajorMatcher.find_sub_disciplines(f"{job.major_raw} {job.job_name}")
@@ -247,175 +323,126 @@ async def get_jobs_list(
             "apply_end_date": job.apply_end_date.isoformat() if job.apply_end_date else None,
             "days_left": days_left,
             "is_urgent": is_urgent,
-            "url": ann_url,
-            "announcement_url": ann_url
+            "url": ann_url or "https://www.shiyebian.com/",
+            "created_at": job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at else None
         })
 
-    total_stmt = select(func.count(Job.id))
-    if not include_expired:
-        total_stmt = total_stmt.where(or_(Job.apply_end_date >= today, Job.apply_end_date.is_(None)))
-    if province:
-        total_stmt = total_stmt.where(Job.province.ilike(f"%{province}%"))
-    if effective_star:
-        total_stmt = total_stmt.where(Job.match_level >= effective_star)
-    if is_bianzhi is not None:
-        total_stmt = total_stmt.where(Job.is_bianzhi == is_bianzhi)
-    elif bianzhi_type:
-        total_stmt = total_stmt.where(Job.bianzhi_type.ilike(f"%{bianzhi_type}%"))
-    if keyword:
-        k_filter = f"%{keyword}%"
-        total_stmt = total_stmt.where(
-            (Job.unit_name.ilike(k_filter)) |
-            (Job.job_name.ilike(k_filter)) |
-            (Job.major_raw.ilike(k_filter))
-        )
-    total = await session.scalar(total_stmt) or 0
+    return {
+        "total": total,
+        "page": page,
+        "page_size": calc_limit,
+        "items": items,
+        "jobs": items
+    }
 
-    return {"total": total, "items": items, "page": page, "page_size": calc_limit}
+@router.get("/api/v1/jobs/{job_id}")
+@router.get("/api/v1/web/jobs/{job_id}")
+async def get_job_detail(job_id: int, session: AsyncSession = Depends(get_db)):
+    """获取单个岗位详情"""
+    stmt = select(Job, Announcement.url, Announcement.title, Announcement.content_raw).outerjoin(
+        Announcement, Job.announcement_id == Announcement.id
+    ).where(Job.id == job_id)
+    
+    res = await session.execute(stmt)
+    row = res.first()
+    if not row:
+        return Response(status_code=404, content="Job not found")
 
-@router.get("/api/v1/dashboard/export/excel")
+    job, ann_url, ann_title, ann_content = row
+    today = date.today()
+    days_left = (job.apply_end_date - today).days if job.apply_end_date else None
+
+    # 避坑深度研判
+    p_res = PitfallExtractor.analyze(
+        job_desc=f"{job.job_name} {job.cert_requirements or ''} {job.major_raw or ''}",
+        announcement_text=(ann_content or "")[:4000]
+    )
+
+    return {
+        "id": job.id,
+        "job_uid": job.job_uid,
+        "province": job.province,
+        "city": job.city,
+        "unit_name": job.unit_name,
+        "unit_type": job.unit_type,
+        "job_code": job.job_code,
+        "job_name": job.job_name,
+        "headcount": job.headcount,
+        "education": job.education,
+        "degree": job.degree,
+        "major_raw": job.major_raw,
+        "cert_requirements": job.cert_requirements,
+        "age_limit_num": job.age_limit_num,
+        "match_level": job.match_level,
+        "match_reason": getattr(job, "match_reason", "匹配"),
+        "is_bianzhi": job.is_bianzhi,
+        "bianzhi_type": job.bianzhi_type,
+        "bianzhi_evidence": getattr(job, "bianzhi_evidence", None),
+        "is_fresh_grad": job.is_fresh_grad,
+        "is_training_required": job.is_training_required,
+        "talent_tags": job.talent_tags,
+        "talent_evidence": job.talent_evidence,
+        "pitfall_risk": p_res["risk_level"],
+        "pitfall_items": p_res["pitfall_items"],
+        "pitfall_analysis": p_res["summary"],
+        "apply_start_date": job.apply_start_date.isoformat() if job.apply_start_date else None,
+        "apply_end_date": job.apply_end_date.isoformat() if job.apply_end_date else None,
+        "days_left": days_left,
+        "announcement_id": job.announcement_id,
+        "announcement_title": ann_title,
+        "announcement_url": ann_url or "https://www.shiyebian.com/",
+        "created_at": job.created_at.strftime("%Y-%m-%d %H:%M:%S") if job.created_at else None
+    }
+
 @router.get("/api/v1/web/jobs/export")
-@router.get("/jobs/export")
-async def export_jobs_data(
-    format: str = Query("xlsx", pattern="^(xlsx|csv|excel)$"),
+async def export_jobs_excel(
     province: Optional[str] = None,
-    min_star: Optional[int] = None,
+    match_level: Optional[int] = None,
     is_bianzhi: Optional[int] = None,
-    keyword: Optional[str] = None,
-    include_expired: bool = False,
     session: AsyncSession = Depends(get_db)
 ):
-    """一键导出岗位清单 (支持 Excel / CSV 格式)"""
-    stmt = select(Job, Announcement.url).outerjoin(Announcement, Job.announcement_id == Announcement.id)
+    """导出筛选后的岗位 Excel 数据 (仅导出有效在招数据)"""
     today = date.today()
-    if not include_expired:
-        stmt = stmt.where(or_(Job.apply_end_date >= today, Job.apply_end_date.is_(None)))
-    if province:
-        stmt = stmt.where(Job.province.ilike(f"%{province}%"))
-    if min_star:
-        stmt = stmt.where(Job.match_level >= min_star)
+    stmt = select(Job).where(or_(Job.apply_end_date >= today, Job.apply_end_date.is_(None)))
+
+    if province and province not in ["全部", "全国"]:
+        stmt = stmt.where(Job.province == province)
+    if match_level and match_level > 0:
+        stmt = stmt.where(Job.match_level == match_level)
     if is_bianzhi is not None:
         stmt = stmt.where(Job.is_bianzhi == is_bianzhi)
-    if keyword:
-        k_filter = f"%{keyword}%"
-        stmt = stmt.where(
-            (Job.unit_name.ilike(k_filter)) |
-            (Job.job_name.ilike(k_filter)) |
-            (Job.major_raw.ilike(k_filter))
-        )
-    stmt = stmt.order_by(Job.match_level.desc(), Job.id.desc())
-    res = await session.execute(stmt)
-    rows = res.all()
 
-    export_records = []
-    for job, ann_url in rows:
-        bianzhi_label = "事业编制" if job.is_bianzhi == 1 else ("报备员额" if job.is_bianzhi == 2 else "合同制/其他")
-        export_records.append({
-            "岗位ID": job.id,
-            "省份": job.province or "全国",
-            "招聘单位": job.unit_name,
-            "单位类别": job.unit_type or "",
-            "单位类型": job.unit_type or "",
-            "岗位名称": job.job_name,
-            "招聘人数": job.headcount,
-            "学历要求": job.education or "不限",
-            "专业要求(原文)": job.major_raw or "",
-            "专业要求": job.major_raw or "",
-            "公卫匹配星级": f"{job.match_level}星",
-            "星级推荐": f"{job.match_level}星",
-            "编制属性": bianzhi_label,
-            "编制性质": "在编" if job.is_bianzhi == 1 else ("非编" if job.is_bianzhi == 0 else "存疑"),
-            "编制细分": job.bianzhi_type or bianzhi_label,
-            "推荐优先级": job.priority_level or "B",
-            "优先级": job.priority_level or "B",
-            "应届限制": "限应届" if job.is_fresh_grad == 1 else ("不限" if job.is_fresh_grad == 0 else "限往届"),
-            "规培要求": "要求" if job.is_training_required == 1 else "不限",
-            "执业资格": job.cert_requirements or "无要求",
-            "年龄上限": f"{job.age_limit_num}岁及以下" if job.age_limit_num else "不限",
-            "政策待遇": job.talent_tags or "常规招考",
-            "报名截止日期": job.apply_end_date.isoformat() if job.apply_end_date else "详见公告",
-            "报名截止时间": job.apply_end_date.isoformat() if job.apply_end_date else "详见公告",
-            "原始公告链接": ann_url or "",
-            "公告原文链接": ann_url or ""
+    stmt = stmt.order_by(Job.match_level.desc(), Job.id.desc()).limit(1000)
+    res = await session.execute(stmt)
+    jobs = res.scalars().all()
+
+    data = []
+    for j in jobs:
+        data.append({
+            "省份": j.province,
+            "招聘单位": j.unit_name,
+            "单位性质": j.unit_type,
+            "岗位名称": j.job_name,
+            "招聘人数": j.headcount,
+            "学历要求": j.education,
+            "专业要求": j.major_raw,
+            "推荐星级": f"{j.match_level}星",
+            "编制属性": j.bianzhi_type or ("事业编制" if j.is_bianzhi == 1 else "其他"),
+            "应届限制": "仅限应届" if j.is_fresh_grad == 1 else "不限",
+            "规培要求": "需要规培" if j.is_training_required == 1 else "不限",
+            "其他要求/资格证": j.cert_requirements or "",
+            "报名截止时间": j.apply_end_date.isoformat() if j.apply_end_date else "详见公告"
         })
 
-    df = pd.DataFrame(export_records)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='预防医学精选岗位')
+    output.seek(0)
 
-    if format.lower() == "csv":
-        csv_buffer = io.StringIO()
-        df.to_csv(csv_buffer, index=False, encoding="utf_8_sig")
-        csv_buffer.seek(0)
-        return Response(
-            content=csv_buffer.getvalue().encode("utf_8_sig"),
-            media_type="text/csv; charset=utf-8-sig",
-            headers={"Content-Disposition": f"attachment; filename=preventive_med_jobs_{timestamp}.csv"}
-        )
-    else:
-        excel_buffer = io.BytesIO()
-        with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="公卫招考岗位清单")
-        excel_buffer.seek(0)
-        return StreamingResponse(
-            excel_buffer,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=preventive_med_jobs_{timestamp}.xlsx"}
-        )
-
-@router.post("/api/v1/web/jobs/recalculate")
-async def recalculate_jobs_evaluations(
-    limit: int = Query(default=1000, ge=1, le=20000, description="单次最大重算岗位数"),
-    session: AsyncSession = Depends(get_db)
-):
-    """
-    一键重算岗位的专业匹配星级、编制判定置信度、人才政策画像与避坑隐形门槛
-    """
-    stmt = (
-        select(Job, Announcement.title, Announcement.content_raw)
-        .outerjoin(Announcement, Job.announcement_id == Announcement.id)
-        .order_by(Job.id.desc())
-        .limit(limit)
+    filename = f"preventive_med_jobs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
-    res = await session.execute(stmt)
-    records = res.all()
-    
-    updated_count = 0
-    for job, ann_title, ann_content in records:
-        major_res = MajorMatcher.match(major_raw=job.major_raw or "", job_name=job.job_name or "")
-        job.match_level = major_res["match_level"]
-        job.match_reason = major_res.get("match_reason")
-
-        bianzhi_res = BianzhiEvaluator.evaluate(
-            job_name=job.job_name or "",
-            unit_name=job.unit_name or "",
-            unit_type=job.unit_type or "其他事业单位",
-            other_requirements=job.cert_requirements or "",
-            announcement_title=ann_title or "",
-            announcement_text=ann_content or ""
-        )
-        job.is_bianzhi = bianzhi_res["is_bianzhi"]
-        job.bianzhi_type = bianzhi_res["bianzhi_type"]
-        job.bianzhi_confidence = bianzhi_res["confidence"]
-        job.bianzhi_evidence = bianzhi_res["bianzhi_evidence"]
-
-        talent_res = TalentPolicyExtractor.extract(
-            text=f"{ann_title or ''} {ann_content or ''} {job.job_name or ''} {job.cert_requirements or ''}"
-        )
-        job.talent_tags = ",".join(talent_res["tags"]) if talent_res["tags"] else None
-        job.talent_evidence = talent_res.get("talent_evidence")
-
-        pitfall_res = PitfallExtractor.analyze(
-            job_desc=f"{job.job_name or ''} {job.cert_requirements or ''} {job.major_raw or ''}",
-            announcement_text=(ann_content or "")[:4000]
-        )
-        job.pitfall_risk = pitfall_res["risk_level"]
-        job.pitfall_items = json.dumps(pitfall_res["pitfall_items"], ensure_ascii=False)
-        
-        updated_count += 1
-
-    await session.commit()
-    return {
-        "status": "SUCCESS",
-        "message": f"成功重算 {updated_count} 个岗位的专业匹配、编制评估与避坑研判数据",
-        "recalculated_count": updated_count
-    }
