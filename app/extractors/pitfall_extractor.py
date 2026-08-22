@@ -140,6 +140,30 @@ class PitfallExtractor:
             })
             risk_score += 20
 
+        # 应届/工作经验限制
+        if re.search(r"限.*?应届|仅限应届|面向.*?应届毕业生|202[56]年应届", combined):
+            pitfalls.append({
+                "tag": "限高校应届毕业生",
+                "risk": "medium",
+                "detail": "限当年应届毕业生或在择业期内未落实工作单位的高校毕业生报考。"
+            })
+            risk_score += 15
+        elif re.search(r"(?:具有|需|满).*?[1-9一二三四五].*?年.*?(?:工作经历|工作经验|基层工作)", combined):
+            pitfalls.append({
+                "tag": "需基层工作经验",
+                "risk": "medium",
+                "detail": "岗位要求具备规定年限的基层或相关岗位工作经历。"
+            })
+            risk_score += 15
+
+        # 性别与适合性别提示
+        if re.search(r"限男性|限女性|仅限男|仅限女|适合男性|适合女性", combined):
+            pitfalls.append({
+                "tag": "建议/限定特定性别",
+                "risk": "low",
+                "detail": "岗位标注性别要求或由于经常出差/夜班注明适合特定性别报考。"
+            })
+
         # 资格证书与门槛
         if re.search(r"公卫执业医师|公共卫生执业医师|执业医师资格", combined):
             pitfalls.append({

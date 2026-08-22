@@ -87,3 +87,30 @@ async def test_shiyebian_province_source_mock(monkeypatch):
     assert items[0].province == "江苏"
     assert items[0].url == "https://www.shiyebian.com/xinxi/99881.html"
 
+def test_major_matcher_vocational_and_pitfall_extraction():
+    from app.rules.major_matcher import MajorMatcher
+    from app.extractors.pitfall_extractor import PitfallExtractor
+
+    # 1. 验证专科预防医学代码 (520601) 穿透与五星量化
+    res_voc = MajorMatcher.calculate_match_score(
+        major_raw="要求专业为520601预防医学或公共卫生管理",
+        unit_type="疾控中心",
+        job_name="免规科流调员",
+        unit_name="某市疾病预防控制中心"
+    )
+    assert res_voc["match_level"] == 5
+    assert "520601" in res_voc["matched_codes"]
+    assert "流行病与卫生统计学" in res_voc["sub_disciplines"]
+    assert "疾病控制与应急处置" in res_voc["sub_disciplines"]
+
+    # 2. 验证避坑引擎识别应届生限制与基层经验限制
+    res_pitfall_fresh = PitfallExtractor.analyze(
+        job_desc="公卫医师岗，面向2026年应届毕业生招聘，最低服务期5年",
+        announcement_text="本市户籍优先"
+    )
+    tags = [p["tag"] for p in res_pitfall_fresh["pitfall_items"]]
+    assert "限高校应届毕业生" in tags
+    assert "最低服务期5年" in tags
+    assert "限本地户籍/生源" in tags
+
+
