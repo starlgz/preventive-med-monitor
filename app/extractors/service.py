@@ -1,3 +1,4 @@
+import os
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -22,19 +23,21 @@ class JobExtractionService:
         # 2. 收集原始岗位（优先附件，其次正文/HTML表格）
         raw_jobs = []
 
-        # 检查是否有已成功解析的附件
+        # 检查是否有已保存的附件（不强制要求 parse_status == "success"）
         att_stmt = select(Attachment).where(
-            Attachment.announcement_id == announcement_id,
-            Attachment.parse_status == "success"
+            Attachment.announcement_id == announcement_id
         )
         attachments = (await db.execute(att_stmt)).scalars().all()
 
         for att in attachments:
-            if att.local_path:
+            if att.local_path and os.path.exists(att.local_path):
                 parsed_res = AttachmentParserDispatcher.parse_file(att.local_path)
                 if parsed_res.get("status") == "SUCCESS":
+                    att.parse_status = "success"
                     for row in parsed_res.get("data", []):
                         raw_jobs.append(row)
+                else:
+                    att.parse_status = "failed"
 
         # 若附件无数据，则从公告 HTML 正文提取表格
         if not raw_jobs and ann.content_raw:

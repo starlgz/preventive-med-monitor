@@ -66,14 +66,14 @@ class ParserDispatcher:
                 pass
 
         for att in att_list:
-            att_name = att.get("name", "")
+            att_name = att.get("file_name") or att.get("name", "")
             att_url = att.get("url", "")
             if not att_url:
                 continue
 
             # 异步下载附件
-            downloaded = await AttachmentDownloader.download_attachment(ann_id, att_url, att_name)
-            if not downloaded.get("success"):
+            downloaded = await AttachmentDownloader.download_file(att_url, att_name)
+            if not downloaded:
                 continue
 
             local_path = downloaded.get("local_path", "")

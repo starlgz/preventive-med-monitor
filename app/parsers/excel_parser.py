@@ -126,33 +126,52 @@ class ExcelJobParser:
                     continue
                 header_row_idx = -1
                 col_map = {}
-                for r in range(sheet.nrows):
+                for r in range(min(10, sheet.nrows)):
                     row_vals = [str(sheet.cell_value(r, c)).strip() for c in range(sheet.ncols)]
                     mapped = ColumnMapper.map_columns(row_vals)
-                    if "job_name" in mapped or "major" in mapped:
+                    if len(mapped) >= 2 and ("job_name" in mapped or "major" in mapped):
                         header_row_idx = r
                         col_map = mapped
                         break
                 if header_row_idx == -1:
                     continue
 
+                last_unit = default_unit_name or ""
                 for r in range(header_row_idx + 1, sheet.nrows):
                     row_vals = [str(sheet.cell_value(r, c)).strip() for c in range(sheet.ncols)]
                     if not any(row_vals):
                         continue
+                    if "job_name" in col_map and row_vals[col_map["job_name"]] in ["岗位名称", "招考职位", "招聘岗位", "岗位\n名称", "岗位"]:
+                        continue
+
+                    unit = row_vals[col_map["unit_name"]] if "unit_name" in col_map and col_map["unit_name"] < len(row_vals) else ""
+                    if unit:
+                        last_unit = unit
+                    else:
+                        unit = last_unit
+
                     job_name = row_vals[col_map["job_name"]] if "job_name" in col_map and col_map["job_name"] < len(row_vals) else ""
                     major_raw = row_vals[col_map["major"]] if "major" in col_map and col_map["major"] < len(row_vals) else ""
                     if not job_name and not major_raw:
                         continue
-                    unit = row_vals[col_map["unit_name"]] if "unit_name" in col_map and col_map["unit_name"] < len(row_vals) else default_unit_name or ""
+
+                    headcount_raw = row_vals[col_map["headcount"]] if "headcount" in col_map and col_map["headcount"] < len(row_vals) else "1"
+                    try:
+                        headcount = int(float(headcount_raw)) if headcount_raw else 1
+                    except:
+                        headcount = 1
+
+                    education = row_vals[col_map["education"]] if "education" in col_map and col_map["education"] < len(row_vals) else ""
+                    other_req = row_vals[col_map["other_requirements"]] if "other_requirements" in col_map and col_map["other_requirements"] < len(row_vals) else ""
+
                     jobs.append({
                         "unit_name": unit or default_unit_name or "未指定招聘单位",
                         "job_name": job_name or "未命名岗位",
                         "job_code": row_vals[col_map["job_code"]] if "job_code" in col_map and col_map["job_code"] < len(row_vals) else "",
-                        "headcount": 1,
-                        "education": row_vals[col_map["education"]] if "education" in col_map and col_map["education"] < len(row_vals) else "",
+                        "headcount": headcount,
+                        "education": education,
                         "major_raw": major_raw,
-                        "other_requirements": ""
+                        "other_requirements": other_req
                     })
         except Exception as e:
             logger.error(f"Error parsing xls file {file_path}: {e}")

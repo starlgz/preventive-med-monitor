@@ -363,11 +363,19 @@ async def export_jobs_data(
         )
 
 @router.post("/api/v1/web/jobs/recalculate")
-async def recalculate_jobs_evaluations(session: AsyncSession = Depends(get_db)):
+async def recalculate_jobs_evaluations(
+    limit: int = Query(default=1000, ge=1, le=20000, description="单次最大重算岗位数"),
+    session: AsyncSession = Depends(get_db)
+):
     """
-    一键全量重算所有岗位的专业匹配星级、编制判定置信度、人才政策画像与避坑隐形门槛
+    一键重算岗位的专业匹配星级、编制判定置信度、人才政策画像与避坑隐形门槛
     """
-    stmt = select(Job, Announcement.title, Announcement.content_raw).outerjoin(Announcement, Job.announcement_id == Announcement.id)
+    stmt = (
+        select(Job, Announcement.title, Announcement.content_raw)
+        .outerjoin(Announcement, Job.announcement_id == Announcement.id)
+        .order_by(Job.id.desc())
+        .limit(limit)
+    )
     res = await session.execute(stmt)
     records = res.all()
     
