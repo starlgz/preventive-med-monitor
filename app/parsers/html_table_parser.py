@@ -41,17 +41,22 @@ class HtmlTableJobParser:
                     continue
 
                 unit = cells[col_map["unit_name"]] if "unit_name" in col_map and col_map["unit_name"] < len(cells) else ""
-                if unit:
-                    last_unit = unit
-                else:
-                    unit = last_unit
-
                 job_name = cells[col_map["job_name"]] if "job_name" in col_map and col_map["job_name"] < len(cells) else ""
                 major_raw = cells[col_map["major"]] if "major" in col_map and col_map["major"] < len(cells) else ""
                 job_code = cells[col_map["job_code"]] if "job_code" in col_map and col_map["job_code"] < len(cells) else ""
                 headcount_raw = cells[col_map["headcount"]] if "headcount" in col_map and col_map["headcount"] < len(cells) else "1"
                 education = cells[col_map["education"]] if "education" in col_map and col_map["education"] < len(cells) else ""
                 other_req = cells[col_map["other_requirements"]] if "other_requirements" in col_map and col_map["other_requirements"] < len(cells) else ""
+
+                # 过滤汇总/统计行
+                import re
+                if re.match(r"^(合计|总计|小计|共计)", job_name.strip()) or (re.match(r"^(合计|总计|小计|共计)", unit.strip()) and not major_raw):
+                    continue
+
+                if unit:
+                    last_unit = unit
+                else:
+                    unit = last_unit
 
                 if not job_name and not major_raw:
                     continue

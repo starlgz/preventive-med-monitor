@@ -39,6 +39,7 @@ class WordJobParser:
 
         jobs = []
         last_unit = default_unit_name or ""
+        import re
         for r_idx in range(header_row_idx + 1, len(rows)):
             row = rows[r_idx]
             row_vals = [cell.text.strip() for cell in row.cells]
@@ -46,17 +47,21 @@ class WordJobParser:
                 continue
 
             unit = row_vals[col_map["unit_name"]] if "unit_name" in col_map and col_map["unit_name"] < len(row_vals) else ""
-            if unit:
-                last_unit = unit
-            else:
-                unit = last_unit
-
             job_name = row_vals[col_map["job_name"]] if "job_name" in col_map and col_map["job_name"] < len(row_vals) else ""
             major_raw = row_vals[col_map["major"]] if "major" in col_map and col_map["major"] < len(row_vals) else ""
             job_code = row_vals[col_map["job_code"]] if "job_code" in col_map and col_map["job_code"] < len(row_vals) else ""
             headcount_raw = row_vals[col_map["headcount"]] if "headcount" in col_map and col_map["headcount"] < len(row_vals) else "1"
             education = row_vals[col_map["education"]] if "education" in col_map and col_map["education"] < len(row_vals) else ""
             other_req = row_vals[col_map["other_requirements"]] if "other_requirements" in col_map and col_map["other_requirements"] < len(row_vals) else ""
+
+            # 过滤汇总/统计行
+            if re.match(r"^(合计|总计|小计|共计)", job_name.strip()) or (re.match(r"^(合计|总计|小计|共计)", unit.strip()) and not major_raw):
+                continue
+
+            if unit:
+                last_unit = unit
+            else:
+                unit = last_unit
 
             if not job_name and not major_raw:
                 continue

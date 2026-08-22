@@ -82,8 +82,11 @@ class ParserDispatcher:
 
             if ext in [".xlsx", ".xls"]:
                 att_jobs = ExcelJobParser.parse_file(local_path, default_unit_name=unit_name)
-            elif ext == ".docx":
+            elif ext in [".docx", ".doc"]:
                 att_jobs = WordJobParser.parse_file(local_path, default_unit_name=unit_name)
+            elif ext == ".pdf":
+                from app.parsers.pdf_parser import PdfJobParser
+                att_jobs = PdfJobParser.parse_file(local_path, default_unit_name=unit_name)
 
             all_jobs.extend(att_jobs)
 

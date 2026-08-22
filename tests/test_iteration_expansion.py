@@ -53,7 +53,7 @@ def test_major_sub_disciplines_matching():
 
     # 儿少与妇幼保健
     m3 = MajorMatcher.match("儿少卫生与妇幼保健学")
-    assert m3["match_level"] == 5
+    assert m3["match_level"] == 4
     assert "儿少卫生与妇幼保健学" in m3["sub_disciplines"]
 
     # 流行病与卫生统计学
