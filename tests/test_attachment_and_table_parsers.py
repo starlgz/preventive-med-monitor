@@ -140,3 +140,25 @@ def test_html_table_parser():
     assert jobs[0]["job_name"] == "职业卫生评价岗"
     assert jobs[0]["headcount"] == 1
     assert "劳动卫生" in jobs[0]["major_raw"]
+
+def test_word_parser_paragraph_extraction(tmp_path):
+    """测试 Word 无表格时段落列表规则提取"""
+    file_path = tmp_path / "test_paragraphs.docx"
+    doc = docx.Document()
+    doc.add_paragraph("一、招聘岗位及要求")
+    doc.add_paragraph("1. 流行病学科流调员：招聘2人，要求预防医学专业，本科及以上学历（学士学位），年龄35周岁以下。")
+    doc.add_paragraph("2. 检验科理化检验人员：招3人，卫生检验与检疫专业，硕士研究生学历。")
+    doc.save(str(file_path))
+
+    jobs = WordJobParser.parse_file(str(file_path), default_unit_name="测试疾控中心")
+    assert len(jobs) == 2
+    assert jobs[0]["unit_name"] == "测试疾控中心"
+    assert jobs[0]["job_name"] == "流行病学科流调员"
+    assert jobs[0]["headcount"] == 2
+    assert "预防医学" in jobs[0]["major_raw"]
+    assert "本科" in jobs[0]["education"]
+
+    assert jobs[1]["job_name"] == "检验科理化检验人员"
+    assert jobs[1]["headcount"] == 3
+    assert "卫生检验与检疫" in jobs[1]["major_raw"]
+    assert "硕士研究生" in jobs[1]["education"]

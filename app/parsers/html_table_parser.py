@@ -46,6 +46,9 @@ class HtmlTableJobParser:
                 job_code = cells[col_map["job_code"]] if "job_code" in col_map and col_map["job_code"] < len(cells) else ""
                 headcount_raw = cells[col_map["headcount"]] if "headcount" in col_map and col_map["headcount"] < len(cells) else "1"
                 education = cells[col_map["education"]] if "education" in col_map and col_map["education"] < len(cells) else ""
+                degree = cells[col_map["degree"]] if "degree" in col_map and col_map["degree"] < len(cells) else ""
+                age = cells[col_map["age"]] if "age" in col_map and col_map["age"] < len(cells) else ""
+                employment_type = cells[col_map["employment_type"]] if "employment_type" in col_map and col_map["employment_type"] < len(cells) else ""
                 other_req = cells[col_map["other_requirements"]] if "other_requirements" in col_map and col_map["other_requirements"] < len(cells) else ""
 
                 # 过滤汇总/统计行
@@ -62,17 +65,24 @@ class HtmlTableJobParser:
                     continue
 
                 try:
-                    headcount = int(float(headcount_raw)) if headcount_raw else 1
+                    digits = re.findall(r"\d+", headcount_raw)
+                    headcount = int(digits[0]) if digits else 1
                 except:
                     headcount = 1
+
+                full_edu = education
+                if degree and degree not in full_edu:
+                    full_edu = f"{full_edu}（{degree}）" if full_edu else degree
 
                 jobs.append({
                     "unit_name": unit or default_unit_name or "未指定招聘单位",
                     "job_name": job_name or "未命名岗位",
                     "job_code": job_code,
                     "headcount": headcount,
-                    "education": education,
+                    "education": full_edu,
                     "major_raw": major_raw,
+                    "age": age,
+                    "employment_type": employment_type,
                     "other_requirements": other_req
                 })
 
