@@ -3,8 +3,8 @@ import apiClient from './client'
 export const fetchDashboardStats = () => apiClient.get('/dashboard/stats')
 export const fetchDashboardCharts = () => apiClient.get('/dashboard/charts')
 
-export const fetchJobs = (params) => apiClient.get('/dashboard/jobs', { params })
-export const fetchJobDetail = (id) => apiClient.get(`/dashboard/jobs/${id}`)
+export const fetchJobs = (params) => apiClient.get('/jobs', { params })
+export const fetchJobDetail = (id) => apiClient.get(`/jobs/${id}`)
 
 export const fetchSources = () => apiClient.get('/sources')
 export const getSchedulerStatus = () => apiClient.get('/sources/scheduler/status')
